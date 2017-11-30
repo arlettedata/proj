@@ -1,0 +1,8 @@
+a,b,"left[a,2]","left[a,20]","left[a,0]","left[a,-2]","left[b,2]","left[b,20]","left[b,0]","left[b,-2]"
+,,,,,,,,,
+,bar,,,,,ba,bar,,
+foo,,fo,foo,,,,,,
+XXXXX,yyyyy,XX,XXXXX,,,yy,yyyyy,,
+foo,bar,fo,foo,,,ba,bar,,
+1111,2222222,11,1111,,,22,2222222,,
+Hello,World!,He,Hello,,,Wo,World!,,

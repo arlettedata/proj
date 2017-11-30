@@ -1,0 +1,1 @@
+--in=data.json num where[len[name]<=6] sort[-len[name],-num] name

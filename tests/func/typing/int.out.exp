@@ -1,0 +1,15 @@
+a,int[a],int[str[a]],int[bool[a]],int[int[a]],int[real[a]],type[a],type[int[a]],type[int[str[a]]],type[int[bool[a]]],type[int[int[a]]],type[int[real[a]]]
+,0,0,0,0,0,str,int,int,int,int,int
+true,0,0,1,0,0,str,int,int,int,int,int
+false,0,0,0,0,0,str,int,int,int,int,int
+0,0,0,0,0,0,str,int,int,int,int,int
+1,1,1,1,1,1,str,int,int,int,int,int
+-1,-1,-1,1,-1,-1,str,int,int,int,int,int
+,0,0,0,0,0,str,int,int,int,int,int
+.1,0,0,1,0,0,str,int,int,int,int,int
+0.0,0,0,0,0,0,str,int,int,int,int,int
+-0.1,0,0,1,0,0,str,int,int,int,int,int
+foo1,0,0,1,0,0,str,int,int,int,int,int
+"""foo2""",0,0,1,0,0,str,int,int,int,int,int
+"""foo3""",0,0,1,0,0,str,int,int,int,int,int
+,0,0,0,0,0,str,int,int,int,int,int

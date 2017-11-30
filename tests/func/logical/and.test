@@ -1,0 +1,1 @@
+--in=data.xml a b a&&b b&&a and[a,b] and[b,a]

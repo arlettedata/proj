@@ -1,0 +1,21 @@
+<top attr1="first attr1 at L1" attrData="99">
+    <L1>
+        <x>a1</x>
+        <L2 attr2="second attr2 at L2">
+            <x>a2</x>
+            <L3 attr1="first attr1 at L3">
+                <x>a3</x>
+            </L3>
+        </L2>
+    </L1>
+    <L1 attr1="second attr1 at L1"/>
+    <L1>
+        <x>b1</x>
+        <L2>
+            <x>b2</x>
+            <L3 attr1="second attr1 at L3" attr2="second attr2 at L3">
+                <x>b3</x>
+            </L3>
+        </L2>
+    </L1>
+</top>

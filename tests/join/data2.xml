@@ -1,0 +1,16 @@
+<top>
+    <group>
+        <name>g1</name>
+        <data>
+            <a>a1</a>
+            <b>b1</b>
+        </data>
+    </group>
+    <group>
+        <name>g2</name>
+        <data>
+            <a>a2</a>
+            <b>b2</b>
+        </data>
+    </group>
+</top>

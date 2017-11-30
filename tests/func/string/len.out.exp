@@ -1,0 +1,8 @@
+a,b,len[a],len[b]
+,,0,0
+,bar,0,3
+foo,,3,0
+XXXXX,yyyyy,5,5
+foo,bar,3,3
+1111,2222222,4,7
+Hello,World!,5,6

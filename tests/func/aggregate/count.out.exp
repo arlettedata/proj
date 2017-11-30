@@ -1,0 +1,2 @@
+count[a],count[b],count[a]+count[b],count[a+b]
+12,12,24,12

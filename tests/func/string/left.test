@@ -1,0 +1,1 @@
+--in=data.csv a b left[a,2] left[a,20] left[a,0] left[a,-2] left[b,2] left[b,20] left[b,0] left[b,-2]

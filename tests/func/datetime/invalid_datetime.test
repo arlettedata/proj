@@ -1,0 +1,4 @@
+--in=datetime.xml 
+dt 
+datetime[dt]
+if[bool[dt..invalid]==[len[datetime[dt]]==0],"okay","dt error exp/act mismatch"]

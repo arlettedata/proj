@@ -1,0 +1,2 @@
+a,1,1.0,"""one""",true,false,1==2,1+2,"""a""&""b""",type(1),type(int[1]),type(1.0),"type(""x"")",type(true),type(false)
+1,1.0,1.0,one,true,false,false,3.0,ab,real,int,real,str,bool,bool

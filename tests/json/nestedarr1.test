@@ -1,0 +1,1 @@
+--in=nestedarr.json row.*.x row.*.y

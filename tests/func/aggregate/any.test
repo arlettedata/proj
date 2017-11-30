@@ -1,0 +1,1 @@
+--in=data.csv color any["Size "&size]

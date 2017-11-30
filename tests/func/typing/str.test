@@ -1,0 +1,1 @@
+--in=data.csv a str[a] str[str[a]] str[bool[a]] str[int[a]] str[real[a]] type[a] type[str[a]] type[str[str[a]]] type[str[bool[a]]] type[str[int[a]]] type[str[real[a]]] 

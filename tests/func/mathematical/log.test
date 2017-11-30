@@ -1,0 +1,1 @@
+--in=math2.xml where[a..f=="log"] a b log[a] log[a,b]

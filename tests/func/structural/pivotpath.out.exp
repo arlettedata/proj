@@ -1,0 +1,16 @@
+pivotpath[x],x
+L0.L1.L2.L3.L4,x0
+L1.L2.L3.L4,x0
+L2.L3.L4,x0
+L3.L4,x0
+L4,x0
+L0.L1,x1
+L1,x1
+L0.L1.L2,x2
+L1.L2,x2
+L2,x2
+L0.L1.L2.L3.L4,x3
+L1.L2.L3.L4,x3
+L2.L3.L4,x3
+L3.L4,x3
+L4,x3

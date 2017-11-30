@@ -1,0 +1,13 @@
+a,b,a!=b,b!=a,"ne[a,b]","ne[b,a]"
+0,0,false,false,false,false
+-1,5,true,true,true,true
+5,1,true,true,true,true
+5,5,false,false,false,false
+1.1,2.2,true,true,true,true
+.1,-.2,true,true,true,true
+a1,b1,true,true,true,true
+1,,true,true,true,true
+,2,true,true,true,true
+xxxxx,xxxxx,false,false,false,false
+A,a,true,true,true,true
+A,B,true,true,true,true

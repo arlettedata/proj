@@ -1,0 +1,1 @@
+--in=math2.xml where[a..f=="pow"] a b pow[a,b]

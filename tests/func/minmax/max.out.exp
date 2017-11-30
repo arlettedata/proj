@@ -1,0 +1,14 @@
+a,b,"max[a,b]","max[b,a]"
+0,0,0,0
+-1,5,5,5
+5,1,5,5
+5,5,5,5
+true,false,true,true
+1.1,2.2,2.2,2.2
+.1,-.2,.1,.1
+a1,b1,b1,b1
+1,,1,1
+,2,2,2
+xxxxx,xxxxx,xxxxx,xxxxx
+A,a,a,a
+A,B,B,B

@@ -1,0 +1,4 @@
+x,y,z,nodenum[x],nodenum[y],nodenum[z]
+x1,y1,z1,2,3,4
+x2,y2,z2,6,8,9
+x3,y3,z3,10,16,17

@@ -1,0 +1,79 @@
+<tests>
+    <data f="abs">
+        <a>0</a>
+        <a>10</a>
+        <a>-12.3</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>
+    <data f="sqrt">
+        <a>0</a>
+        <a>1</a>
+        <a>-1</a>
+        <a>4</a>
+        <a>10</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>
+    <data f="floor">
+        <a>0</a>
+        <a>1</a>
+        <a>-1</a>
+        <a>4.1</a>
+        <a>10.9</a>
+        <a>-4.1</a>
+        <a>-4.9</a>
+        <a>-10.1</a>
+        <a>-10.9</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>
+    <data f="ceil">
+        <a>0</a>
+        <a>1</a>
+        <a>-1</a>
+        <a>4.1</a>
+        <a>10.9</a>
+        <a>-4.1</a>
+        <a>-4.9</a>
+        <a>-10.1</a>
+        <a>-10.9</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>
+        <data f="round">
+        <a>0</a>
+        <a>1</a>
+        <a>-1</a>
+        <a>4.1</a>
+        <a>10.9</a>
+        <a>-4.1</a>
+        <a>-4.9</a>
+        <a>-10.1</a>
+        <a>-10.9</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>
+    <data f="exp">
+        <a>0</a>
+        <a>1</a>
+        <a>-1</a>
+        <a>2</a>
+        <a>-2</a>
+        <a>-.5</a>
+        <a></a>
+        <a>x</a>
+        <a>true</a>
+        <a>false</a>
+    </data>    
+ </tests>

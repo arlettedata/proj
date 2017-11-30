@@ -1,0 +1,13 @@
+a,b,a==b,b==a,"eq[a,b]","eq[b,a]"
+0,0,true,true,true,true
+-1,5,false,false,false,false
+5,1,false,false,false,false
+5,5,true,true,true,true
+1.1,2.2,false,false,false,false
+.1,-.2,false,false,false,false
+a1,b1,false,false,false,false
+1,,false,false,false,false
+,2,false,false,false,false
+xxxxx,xxxxx,true,true,true,true
+A,a,false,false,false,false
+A,B,false,false,false,false

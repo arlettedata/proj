@@ -1,0 +1,1 @@
+--in=data.csv stdev[a] stdev[b] stdev[a]+stdev[b] stdev[a+b]

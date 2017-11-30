@@ -1,0 +1,1 @@
+--in=data.csv a b upper[a] upper[b] upper[lower[a]] upper[lower[b]]

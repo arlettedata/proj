@@ -1,0 +1,7 @@
+x,x..attr1,x..attr2
+a1,first attr1 at L1,
+a2,first attr1 at L1,second attr2 at L2
+a3,first attr1 at L3,second attr2 at L2
+b1,first attr1 at L1,
+b2,first attr1 at L1,
+b3,second attr1 at L3,second attr2 at L3

@@ -1,0 +1,10 @@
+a,b,a/b,int[a]/b,a/int[b],real[a]/int[b],int[a]/int[b],str[a]/str[b],bool[a]/bool[b]
+0,0,nan,nan,nan,nan,0,nan,nan
+-1,5,-0.2,-0.2,-0.2,-0.2,0,-0.2,1.0
+5,1,5.0,5.0,5.0,5.0,5,5.0,1.0
+1.1,2.2,0.5,0.4545454545,0.55,0.55,0,0.5,1.0
+.1,-.2,-0.5,-0.0,nan,nan,0,-0.5,1.0
+a1,b1,nan,nan,nan,nan,0,nan,1.0
+1,,nan,nan,nan,nan,0,nan,nan
+,2,0.0,0.0,0.0,0.0,0,0.0,0.0
+"""a2""","""b2""",nan,nan,nan,nan,0,nan,1.0

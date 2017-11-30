@@ -1,0 +1,2 @@
+Example: cat file.json | proj id sum[cost]
+For complete documentation, open README.MD.

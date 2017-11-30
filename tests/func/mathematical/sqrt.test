@@ -1,0 +1,1 @@
+--in=math1.xml where[a..f=="sqrt"] a sqrt[a]

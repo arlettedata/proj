@@ -1,0 +1,2 @@
+--in=data.csv a b concat[a,b] len[concat[a,b]] a&b len[a&b]
+ 

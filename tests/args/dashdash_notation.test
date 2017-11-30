@@ -1,0 +1,2 @@
+--in=data.xml a if[2==2,"equal","unequal"] --if=2==2,"equal","unequal"
+ 

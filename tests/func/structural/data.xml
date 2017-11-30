@@ -1,0 +1,22 @@
+<A>
+    <x>x1</x>
+    <y>y1</y> <z>z1</z>
+    <B> 
+        <x>x2</x>
+        <C>
+            <y>y2</y> <z>z2</z>
+        </C>
+    </B>
+    <x>x3</x>
+    <misc>
+        <blah>
+        </blah>
+        <blah>
+        </blah>
+        <blah>
+        </blah>
+    </misc>
+    <B>
+        <y>y3</y> <z>z3</z>
+    </B>
+</A>

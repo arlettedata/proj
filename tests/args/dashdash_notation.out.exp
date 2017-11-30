@@ -1,0 +1,2 @@
+a,"if[2==2,""equal"",""unequal""]","--if=2==2,""equal"",""unequal"""
+1,equal,equal

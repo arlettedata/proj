@@ -1,0 +1,3 @@
+{
+    "text": "line1\nline2\ttabbed\r\nline3\rline3overwritten\n\"Hello World\""
+}

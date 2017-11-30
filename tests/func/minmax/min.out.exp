@@ -1,0 +1,14 @@
+a,b,"min[a,b]","min[b,a]"
+0,0,0,0
+-1,5,-1,-1
+5,1,1,1
+5,5,5,5
+true,false,false,false
+1.1,2.2,1.1,1.1
+.1,-.2,-.2,-.2
+a1,b1,a1,a1
+1,,,
+,2,,
+xxxxx,xxxxx,xxxxx,xxxxx
+A,a,A,A
+A,B,A,A

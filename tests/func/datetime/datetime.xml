@@ -1,0 +1,31 @@
+<data>
+    <dt cmp="true" sort="true">49-1-02 6:15:10</dt>
+    <dt cmp="true" sort="true">50-1-12 12:15:00.120</dt>
+    <dt cmp="true" sort="true">50-1-12 12:15:00:567</dt>
+    <dt cmp="true" sort="true">2011-2-5 16:59:59</dt>
+    <dt cmp="true" sort="true">2011-2-6 16:59:58</dt>
+    <dt cmp="true" sort="true">2011-2-6 16:59:59</dt>
+    <dt cmp="true" sort="true">2011-2-6 16:59:59:01</dt>
+    <dt cmp="true" sort="true">2011-2-6 17:00:00</dt>
+    <dt cmp="true" sort="true">2011-2-6 17:00:00AM</dt>
+    <dt cmp="true" sort="true">2011-2-6 17:00:00PM</dt>
+    <dt cmp="true" sort="true">2011-2-6 7:00:00AM</dt>
+    <dt cmp="true" sort="true">2011-2-6 7:00:00PM</dt>
+    <dt cmp="true" sort="true">0000-12-3</dt>
+    <dt sort="true">2011-2-09 12:00:00.0001</dt>
+    <dt sort="true">2011-8-1</dt>
+    <dt sort="true">2011-8-1 12:00:00</dt>
+    <dt sort="true">2017-12-31 17:00:00</dt>
+    <dt sort="true">2017-12-2 18:00:00</dt>
+    <dt sort="true">2017-12-1 12:59:00</dt>
+    <dt sort="true">2018-11-1 12:00:59</dt>
+    <dt sort="true">2019-12-2 12:00:59.9999</dt>
+    <dt invalid="true">2018-12-3 12:61:00</dt>
+    <dt invalid="true">2019-12-4 12:00:60</dt>
+    <dt invalid="true">2020-12-5 12:00:59.999999</dt>
+    <dt invalid="true">1000000</dt>
+    <dt invalid="true">1000000.12</dt>
+    <dt invalid="true"></dt>
+    <dt invalid="true">x</dt>
+    <dt invalid="true">true</dt>
+</data>

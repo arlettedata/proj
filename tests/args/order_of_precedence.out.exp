@@ -1,0 +1,2 @@
+a+b*c,c*b+a,c+a/b,[a+b]*c,c*[a+b],b*b+c*c,3==a+b,a+b==3,b+b*c+c,b+[b*c]+c,a==1&&b==2,a&b==2&c,a&[b==2]&c
+7.0,7.0,3.5,9.0,9.0,13.0,true,true,11.0,11.0,true,false,1true3

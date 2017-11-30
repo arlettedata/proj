@@ -1,0 +1,1 @@
+--in=values.csv a b min[a,b] min[b,a]

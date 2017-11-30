@@ -1,0 +1,8 @@
+{
+    "codes": [
+        "&quot;Hello&quot;",
+        "&apos;World&apos;",
+        "&lt;foo&gt;",
+        "M&amp;Ms;"
+    ]
+}

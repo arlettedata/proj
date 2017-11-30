@@ -1,0 +1,8 @@
+a,b,lower[a],lower[b],lower[upper[a]],lower[upper[b]]
+,,,,,
+,bar,,bar,,bar
+foo,,foo,,foo,
+XXXXX,yyyyy,xxxxx,yyyyy,xxxxx,yyyyy
+foo,bar,foo,bar,foo,bar
+1111,2222222,1111,2222222,1111,2222222
+Hello,World!,hello,world!,hello,world!

@@ -1,0 +1,13 @@
+a,b,a<=b,b<=a,"le[a,b]","le[b,a]"
+0,0,true,true,true,true
+-1,5,true,false,true,false
+5,1,false,true,false,true
+5,5,true,true,true,true
+1.1,2.2,true,false,true,false
+.1,-.2,false,true,false,true
+a1,b1,true,false,true,false
+1,,false,true,false,true
+,2,true,false,true,false
+xxxxx,xxxxx,true,true,true,true
+A,a,true,false,true,false
+A,B,true,false,true,false

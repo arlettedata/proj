@@ -1,0 +1,8 @@
+a,b,"concat[a,b]","len[concat[a,b]]",a&b,len[a&b]
+,,,0,,0
+,bar,bar,3,bar,3
+foo,,foo,3,foo,3
+XXXXX,yyyyy,XXXXXyyyyy,10,XXXXXyyyyy,10
+foo,bar,foobar,6,foobar,6
+1111,2222222,11112222222,11,11112222222,11
+Hello,World!,HelloWorld!,11,HelloWorld!,11

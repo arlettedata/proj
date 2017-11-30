@@ -1,0 +1,5 @@
+a,b,"if[a==b,""equals"",""not equals""]"
+0,0,equals
+0,0,equals
+1,0,not equals
+1,0,not equals

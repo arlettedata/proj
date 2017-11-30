@@ -1,0 +1,1 @@
+--in=data.csv avg[a] avg[b] avg[a]+avg[b] avg[a+b]

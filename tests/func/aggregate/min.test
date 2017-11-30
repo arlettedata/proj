@@ -1,0 +1,1 @@
+--in=data.csv min[a] min[b] min[a]+min[b] min[a+b]

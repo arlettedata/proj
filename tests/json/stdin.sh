@@ -1,0 +1,1 @@
+cat all.json | proj

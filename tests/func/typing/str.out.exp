@@ -1,0 +1,15 @@
+a,str[a],str[str[a]],str[bool[a]],str[int[a]],str[real[a]],type[a],type[str[a]],type[str[str[a]]],type[str[bool[a]]],type[str[int[a]]],type[str[real[a]]]
+,,,false,0,0,str,str,str,str,str,str
+true,true,true,true,0,0,str,str,str,str,str,str
+false,false,false,false,0,0,str,str,str,str,str,str
+0,0,0,false,0,0,str,str,str,str,str,str
+1,1,1,true,1,1,str,str,str,str,str,str
+-1,-1,-1,true,-1,-1,str,str,str,str,str,str
+,,,false,0,0,str,str,str,str,str,str
+.1,.1,.1,true,0,0.1,str,str,str,str,str,str
+0.0,0.0,0.0,false,0,0,str,str,str,str,str,str
+-0.1,-0.1,-0.1,true,0,-0.1,str,str,str,str,str,str
+foo1,foo1,foo1,true,0,0,str,str,str,str,str,str
+"""foo2""","""foo2""","""foo2""",true,0,0,str,str,str,str,str,str
+"""foo3""","""foo3""","""foo3""",true,0,0,str,str,str,str,str,str
+,,,false,0,0,str,str,str,str,str,str

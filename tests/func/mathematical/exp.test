@@ -1,0 +1,1 @@
+--in=math1.xml where[a..f=="exp"] a exp[a]

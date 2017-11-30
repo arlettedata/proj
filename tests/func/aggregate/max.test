@@ -1,0 +1,1 @@
+--in=data.csv max[a] max[b] max[a]+max[b] max[a+b]

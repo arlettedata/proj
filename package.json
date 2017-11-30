@@ -1,0 +1,25 @@
+{
+  "name": "proj",
+  "version": "0.0.9",
+  "description": "Fast xml/json/log/csv queries without leaving the command line.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arlettedata/proj.git"
+  },
+  "author": "Brian Kramer",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/arlettedata/proj/issues"
+  },
+  "homepage": "https://github.com/arlettedata/proj#readme",
+  "dependencies": {
+    "globby": "^7.1.1"
+  }
+}

@@ -1,0 +1,1 @@
+cat basic.csv | proj

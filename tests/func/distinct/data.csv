@@ -1,0 +1,13 @@
+color,size,a,b
+red,L,1,2
+red,L,2,3
+red,L,2,5
+green,L,3,3
+red,M,4,3
+blue,S,5,6
+blue,S,6,7
+blue,S,6,7
+green,S,7,-1
+blue,M,8,9
+blue,L,10,10
+blue,M,8,10
