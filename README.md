@@ -6,8 +6,6 @@ This repo is quite new, and documentation is forthcoming.  Until then, please re
 2. An introductory/historical writeup in this repo's [wiki](https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.).
 3. [Unit tests](https://github.com/arlettedata/proj/tree/master/tests) you can scrape for examples.
 
-In addition, there are unit tests that serve as examples.
-
 # Build
 The repo is built using g++ with C++11 support, and the resulting binary can be moved to a common location.
 
