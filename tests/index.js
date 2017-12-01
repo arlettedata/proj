@@ -193,9 +193,9 @@ async function main() {
     console.log("Baselines set: " + baselines);
 }
 
-// If no args, assume we search for test cases starting here.
+// If no args, assume we search for test cases under the ./tests directory.
 if (process.argv.length == 0) {
-    process.argv = ["."];
+    process.argv = ["./tests"];
 }
 
 // Run

@@ -659,9 +659,11 @@ private:
     std::string MakeTag(const std::string& str) 
     {
         std::string tag(str);
-        // deal with xml-unfriendly tags
-        if (strchr("</!?", tag[0]) != nullptr) {
-            tag = "\"" + tag + "\"";
+        if (!tag.empty()) {
+            // deal with xml-unfriendly tags
+            if (strchr("</!?", tag[0]) != nullptr) {
+                tag = "\"" + tag + "\"";
+            }
         }
         return std::move(tag);
     }

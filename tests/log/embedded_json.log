@@ -1,0 +1,7 @@
+[17-06-08 21:18:07.01] [INFO] cat - first message foo: { a: { b: [1, 10] }, c: "one", d: false } end of first message
+[17-06-08 21:18:07.02] [INFO] cat - second msg foo: { a: { b: [2, 20] }, c: "two", d: true } end of second message
+[17-06-08 21:18:07.03] [INFO] cat - foo: { a: { b: [3, 30] }, c: "three", d: true } end of third message
+[17-06-08 21:18:07.04] [INFO] cat - fourth message { a: { b: [4, 40] }, c: "four", d: true } end of fourth message
+[17-06-08 21:18:07.05] [INFO] cat - { a: { b: [5, 50] }, c: "five", d: true } end of fifth message
+[17-06-08 21:18:07.06] [INFO] { a: { b: [6, 60] }, c: "six", d: true } end of sixth message
+

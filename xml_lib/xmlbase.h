@@ -212,9 +212,14 @@ struct XmlDateTime
     }
 
     // FromString expects either both date/time in the first arg, sep. by space, or across two args.
+    // The conversion is lenient: we validate (i.e. set dt.error) only on incorrect number of input fields
+    // From there, we set the bits of the date and time values assuming good faith; it's really
+    // not in the scope of this tool to validate input date-time values, only to recognize that something
+    // has the general form of a date-time.
     static XmlDateTime FromString(const std::string& d_or_dt, const std::string& t = std::string())
     {
         XmlDateTime dt = { 0 };
+        dt.error = 1;
 
         std::string datePart;
         std::string timePart;
@@ -224,7 +229,6 @@ struct XmlDateTime
         }
         size_t numParts = parts.size();
         if (numParts == 0 || numParts > 2) {
-            dt.error = true;
             return std::move(dt);
         }
 
@@ -241,78 +245,107 @@ struct XmlDateTime
             timePart = parts[1];
         }
 
-        bool dateOk = false;
-        if (datePart.empty()) {
-            dateOk = true;
-        }
-        else {
-            parts = std::move(XmlUtils::Split(datePart, "-"));
-            if (parts.size() == 3) {
-                dt.year = atoi(parts[0].c_str());
-                if (dt.year >= 0 && dt.year <= 49) {
-                    dt.year += 2000;
-                }
-                else if (dt.year >= 0 && dt.year <= 99) {
-                    dt.year += 1900;
-                }
-                dt.month = atoi(parts[1].c_str());
-                dt.day = atoi(parts[2].c_str());
-                dateOk = dt.year >= 0 && dt.month >= 1 && dt.month <= 12 && dt.day >= 1
-                    && dt.day <= 31; // Note: not fully validated
-            }
+        unsigned int year = 0, month = 0, day = 0;
+        parts = std::move(XmlUtils::Split(datePart, "-"));
+        if (parts.size() < 3) {
+            return dt; // error
         }
 
-        bool timeOk = false;
+        year = abs(atoi(parts[0].c_str()));
+        month = abs(atoi(parts[1].c_str()));
+        day = abs(atoi(parts[2].c_str()));
+        if (year <= 49) {
+            year += 2000;
+        }
+        else if (year <= 99) {
+            year += 1900;
+        } 
+        else if (year > 2049) {
+            return dt; // error;
+        }
+        if (month == 0 || month > 12) {
+            return dt; // error
+        }
+        if (day == 0 || day > 31) {
+            return dt; // error
+        }
+
+        unsigned int hr = 0, min = 0, sec = 0, ms = 0;
         if (timePart.empty()) {
-            dt.dateonly = true;
-            timeOk = true;
+            dt.dateonly = 1;
         }
         else {
             parts = std::move(XmlUtils::Split(timePart, ":"));
-            if (parts.size() >= 3) {
-                dt.hours = atoi(parts[0].c_str());
-                dt.minutes = atoi(parts[1].c_str());
-                std::string msPart;
-                if (parts.size() >= 4) {
-                    // treat sec and ms as separated by :
-                    dt.seconds = atoi(parts[2].c_str());
-                    msPart = std::move(parts[3]);
-                } 
-                else {
-                    // sec and possible ms separated by .
-                    std::vector<std::string> s_ms = std::move(XmlUtils::Split(parts[2], ".")); 
-                    dt.seconds = atoi(s_ms[0].c_str());
-                    if (s_ms.size() >= 2) {
-                        msPart = std::move(s_ms[1]);
-                    }
+            if (parts.size() < 3) {
+                return dt; // error
+            }
+
+            hr = abs(atoi(parts[0].c_str()));
+            min = abs(atoi(parts[1].c_str()));
+            std::string msPart;
+            if (parts.size() >= 4) {
+                // treat sec and ms as separated by :
+                sec = abs(atoi(parts[2].c_str()));
+                msPart = std::move(parts[3]);
+            } 
+            else {
+                // sec and possible ms separated by .
+                std::vector<std::string> s_ms = std::move(XmlUtils::Split(parts[2], ".")); 
+                sec = abs(atoi(s_ms[0].c_str()));
+                if (s_ms.size() >= 2) {
+                    msPart = std::move(s_ms[1]);
                 }
-                
-                if (!msPart.empty()) {
-                    // Suppose sec.ms is 8.12345678. We want 1235 to be the ms component.
-                    int ms;
-                    char* frac = (char*)msPart.c_str();
-                    if (strlen(frac) < 5) {
-                        ms = atoi(frac);
-                    }
-                    else {
-                        int r = frac[4] + '0';
-                        frac[4] = '\0';
-                        ms = atoi(frac);
-                        if (r >= 5) {
-                            ms++;
-                        }
-                    }
-                    dt.ms = ms;
+            }
+            
+            if (!msPart.empty()) {
+                // Suppose sec.ms is 8.12345678. We want 1235 to be the ms component.
+                msPart += "0000"; // add enough trailing zeros so we can grab 4 digits with rounding e.g. .1 => .10000 
+                if (msPart[4] > '5') {
+                    ms++; // round up
                 }
-                timeOk = dt.hours >= 0 && dt.hours < 24 && dt.minutes >= 0 && dt.minutes < 60 && dt.seconds >= 0 &&
-                    dt.seconds < 60 && dt.ms >= 0 && dt.ms < 10000;
-                if ((parts[2].find("pm") != std::string::npos || parts[2].find("PM") != std::string::npos) && dt.hours < 12) {
-                    dt.hours += 12;
+                msPart[4] = '\0'; // truncate
+                ms += abs(atoi(msPart.c_str()));
+            }
+
+            // carry over time units out
+            while (ms >= 10000) {
+                ms -= 10000;
+                sec++;
+            }
+            while (sec >= 60) {
+                sec -= 60;
+                min++;
+            }
+            while (min >= 60) {
+                min -= 60;
+                hr++;
+            }
+            while (hr >= 24) {
+                hr -= 24;
+                if (day > 31) {
+                    return dt; // error
                 }
+                day++;
+            }
+            if ((parts[2].find("pm") != std::string::npos || parts[2].find("PM") != std::string::npos) && hr < 12) {
+                hr += 12;
             }
         }
 
-        dt.error = !dateOk || !timeOk;
+        assert(year >= 1950 && year <= 2049 && month >= 1 && month <= 12 && day >= 1 && day <= 31);
+        dt.year = year;
+        dt.month = month;
+        dt.day = day;
+
+        if (!dt.dateonly) {
+            assert(hr < 24 && min < 60 && sec < 60 && ms < 10000);
+            dt.hours = hr;
+            dt.minutes = min;
+            dt.seconds = sec;
+            dt.ms = ms;
+        }
+
+        dt.error = 0;
         return std::move(dt);
     }
 
@@ -351,8 +384,25 @@ struct XmlDateTime
             ss << std::setw(4) << year << "-" << std::setw(2) << month << "-" << std::setw(2) << day;
             if (!dateonly) {
                 ss << " " << std::setw(2) << hours << ":" << std::setw(2) << minutes << ":" << std::setw(2) << seconds;
-                if (subsecondTimes) {
-                    ss << "." << ms;
+                if (ms > 0) {
+                    int p = ms; // p is the printed millisecond value with trailing zeros removed
+                    while (p > 0 && p % 10 == 0) {
+                        p /= 10; 
+                    }
+                    if (subsecondTimes) {
+                        if (ms < 10) {
+                            ss << ".000" << p;
+                        }
+                        else if (ms < 100) {
+                            ss << ".00" << p;
+                        }
+                        else if (ms < 1000) {
+                            ss << ".0" << p;
+                        }
+                        else {
+                            ss << "." << p;
+                        }
+                    }
                 }
             }
         }

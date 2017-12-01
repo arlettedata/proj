@@ -252,6 +252,7 @@ private:
         size_t currPart = 0;
         char isdigit0 = numParts >= 1 && isdigit(parts[0][0]);
         char isdigit1 = numParts >= 2 && isdigit(parts[1][0]);
+        dt = XmlDateTime();
         dt.error = 1;
         if (numParts == 1 && isdigit0) {
             dt = XmlDateTime::FromString(parts[currPart++]);
@@ -267,16 +268,25 @@ private:
         }
         if (currPart < numParts) {
             level = parts[currPart++];
+        } 
+        else {
+            level.clear();
         }
         // categories, when they exist, are separated before msg with a " - ", so it should show up as a part.
         if (currPart + 1 < numParts && parts[currPart + 1] == "-") {
             category = parts[currPart];
             currPart += 2;
         }
+        else {
+            category.clear();
+        }
         if (currPart < numParts) {
             msg = positions[currPart];
         }
-        return !dt.error && level.size() > 0;
+        else {
+            msg.clear();
+        }
+        return !dt.error; // level, category, and msg can be empty and we'll still accept the log line
     }
 
     bool ParseLog(std::string& backBuffer, std::queue<std::string>& backLines)
@@ -508,16 +518,17 @@ private:
         const char* endLabel = nullptr;
         std::string label;
         const char* pos;
-        for (pos = beg; pos >= msg.c_str(); pos--) {
+        for (pos = beg - 1; pos >= msg.c_str(); pos--) {
             if (*pos == ':') {
-                if (foundColon) // can't have multiple colons
+                if (foundColon) { // can't have multiple colons
                     break;
+                }
                 foundColon = true;
             }
             else if (isalnum(*pos) || (*pos == '_')) {
                 if (!inLabel) {
                     if (!foundColon) { // can't start reading label (from end) if we don't have a colon
-                        break;
+                        break; // without a label (okay)
                     }
                     inLabel = true;
                     endLabel = pos;

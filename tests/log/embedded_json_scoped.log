@@ -1,0 +1,11 @@
+[17-06-08 21:18:07.01] [TRACE] START - foo: { a: 1 } msg1
+[17-06-08 21:18:07.02] [TRACE] START - bar:{ b: 2 } msg2
+[17-06-08 21:18:07.02] [TRACE] START - baz:   { c: 3 } msg3
+[17-06-08 21:18:07.04] [TRACE] END - baz msg4
+[17-06-08 21:18:07.05] [TRACE] END - bar msg5
+[17-06-08 21:18:07.06] [TRACE] END - foo msg6
+[17-06-08 21:18:08.07] [TRACE] START - foo: { a: 4 } msg7
+[17-06-08 21:18:08.08] [TRACE] START - bar: { b: 5 } msg8
+[17-06-08 21:18:08.09] [TRACE] ROOT - bar msg9
+[17-06-08 21:18:07.01] [TRACE] START - foo: { a: 6 } msg10
+[17-06-08 21:18:07.02] [TRACE] END - foo msg 11
