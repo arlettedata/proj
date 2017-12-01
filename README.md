@@ -2,8 +2,8 @@
 **proj**: fast xml/json/log/csv queries without leaving the command line. 
 
 This repo is quite new, and documentation is forthcoming.  Until then, please refer to the following resources:
-1. A [11-step tutorial](https://github.com/arlettedata/proj/tutorial/TUTORIAL.md)
-2. An introductory/historical writeup in this repo's [wiki](https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry)
+1. A [11-step tutorial](https://github.com/arlettedata/proj/tutorial/TUTORIAL.md).
+2. An introductory/historical writeup in this repo's [wiki](https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry).
 3. [Unit tests](https://github.com/arlettedata/proj) you can scrape for examples.
 
 In addition, there are unit tests that serve as examples.
