@@ -395,7 +395,8 @@ private:
         if (!getNextLine(firstLine)) {
             return false;
         }
-
+        XmlUtils::TrimTrailingWhitespace(firstLine);
+        
         std::string delimiter = "\t";
         std::vector<std::string> firstLineParts;
         ParseCsvLine(firstLine, delimiter, firstLineParts);
@@ -601,7 +602,7 @@ private:
         if (m_outputHeader) {
             bool first = true;
             for (auto& column : m_parser->GetColumns()) {
-                if (column->valueIdx == -1) {
+                if (!(column->flags & XmlColumn::Output)) {
                     continue;
                 }
                 if (!first) {
@@ -619,7 +620,7 @@ private:
         do {
             bool first = true;
             for (auto& column : m_parser->GetColumns()) {
-                if (column->valueIdx == -1) {
+                if (!(column->flags & XmlColumn::Output)) {
                     continue;
                 }
 

@@ -299,6 +299,7 @@ public:
                         }
                     }
                 }
+                break;
             }
 
             case '0':
@@ -330,7 +331,7 @@ public:
 
             default:
                 if (isalpha(str[0]) || str[0] == '_') {
-                    while (isalpha(*m_pos) || isdigit(*m_pos) || *m_pos == '_') {
+                    while (isalpha(*m_pos) || isdigit(*m_pos) || *m_pos == '_' || *m_pos == ' ') {
                         str += *m_pos++;
                     }
                     return std::move(Token(TokenId::Id, str));
@@ -441,10 +442,6 @@ public:
 
         XmlType type = XmlType::Unknown;
         switch (op->opcode) {
-            case Opcode::OpColumnRef:
-                // no type inference here: we instead do a type conversion in the evaluation of OpColumnRef
-                break;
-
             case Opcode::OpReal:
                 expr->SetType(XmlType::Real);
                 arg0->ChangeType(XmlType::Real);
@@ -653,6 +650,7 @@ public:
                 arg0->ChangeType(XmlType::Integer);
                 break;
 
+            case Opcode::OpColumnRef:
             case Opcode::OpWhere:
             case Opcode::OpAny:
             case Opcode::OpSync:
@@ -902,6 +900,14 @@ public:
                     }
                 }
                 else {
+                    if (m_context->passType == XmlPassType::StoredValuesPass && 
+                        column->expr->flags & XmlExpr::SubtreeContainsAggregate) {
+                        // aggregate columns are recomputed on every stored row, so we need to  
+                        // reevaluate the cached expression value
+                        Evaluate(column->expr); 
+                    }
+                    // The same column reference can appear in muliple expressions with different types,
+                    // so convert.
                     expr->SetValue(XmlValue::Convert(column->expr->GetValue(), expr->GetType()));
                 }
                 break;

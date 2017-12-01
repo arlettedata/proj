@@ -200,7 +200,7 @@ public:
         if (Aggregated()) {
             assert(Distinct());
             size_t maxRows = m_rowRefs.size(); // expected to be populated due to distinct codepath
-            if (m_querySpec->IsFlagSet(XmlQuerySpec::TopNRowsSpecified)) {
+            if (!NeedsSorting() && m_querySpec->IsFlagSet(XmlQuerySpec::TopNRowsSpecified)) {
                 maxRows = std::min(maxRows, m_querySpec->GetTopNRows());
             }
             for (size_t rowIdx = 0; rowIdx < maxRows; rowIdx++) {
@@ -364,12 +364,16 @@ private:
         XmlExprEvaluator evaluator(m_context);
         for (auto& column : GetColumns()) {
             if (column == m_querySpec->GetSortColumn()) {
-                // evaluate the sort arguments, not the sort expr itself; the resulting values
-                // go after the output values in the rows
+                // evaluate the non-aggregate sort arguments; the resulting values go after the output values in the rows
+                // (we'll evaluate the aggregates when it comes time to sort)
                 size_t valueIdx = m_querySpec->GetNumValueColumns(); // advance past output values
                 size_t numArgs = column->expr->GetNumArgs();
                 for (size_t i = 0; i < numArgs; i++) {
-                    row[valueIdx++] = std::move(evaluator.Evaluate(column->expr->GetArg(i)));
+                    XmlExprPtr expr = column->expr->GetArg(i);
+                    if (!(expr->flags & XmlExpr::SubtreeContainsAggregate)) {
+                        row[valueIdx] = std::move(evaluator.Evaluate(expr));
+                    }
+                    valueIdx++;
                 }
             }
             else if (!column->IsAggregate() && column->IsOutput()) {
@@ -450,9 +454,33 @@ private:
     void SortRows()
     {
         assert(NeedsSorting());
+
+        XmlColumnPtr sortColumn = m_querySpec->GetSortColumn();
+        assert(sortColumn);
+        XmlExprPtr sortExpr = sortColumn->expr;
+        assert(sortExpr);
+        
+        if (Aggregated()) {
+            for (size_t rowIdx = 0; rowIdx < m_rowRefs.size(); rowIdx++) {
+                XmlExprEvaluator evaluator(m_context, &m_aggregates[rowIdx]);
+                XmlRow& row = *m_rowRefs[rowIdx].first;
+                // evaluate the aggregate sort arguments; the resulting values go after the output values in the rows
+                size_t valueIdx = m_querySpec->GetNumValueColumns(); // advance past output values
+                size_t numArgs = sortExpr->GetNumArgs();
+                for (size_t i = 0; i < numArgs; i++) {
+                    XmlExprPtr expr = sortExpr->GetArg(i);
+                    if (expr->flags & XmlExpr::SubtreeContainsAggregate) {
+                        row[valueIdx] = std::move(evaluator.Evaluate(expr));
+                    }
+                    valueIdx++;
+                }
+            }
+        }
+
         size_t firstSortValue = m_querySpec->GetNumValueColumns();
         size_t numSortValues = m_querySpec->GetNumSortValues();
         const std::vector<bool>& rev = m_querySpec->GetReversedStringSorts();
+
         std::sort(m_rowRefs.begin(), m_rowRefs.end(),
             [firstSortValue, numSortValues, rev](const RowRef& left, const RowRef& right) -> bool {
                 const XmlValue* leftValues = &left.first->at(firstSortValue);
@@ -494,14 +522,14 @@ private:
     bool CheckFirstNRowsCondition() const
     {
         m_context->numRowsMatched++;
-        return m_querySpec->IsFlagSet(XmlQuerySpec::FirstNRowsSpecified)
-            && (m_context->numRowsMatched > m_querySpec->GetFirstNRows());
+        return m_querySpec->IsFlagSet(XmlQuerySpec::FirstNRowsSpecified) &&
+            (m_context->numRowsMatched > m_querySpec->GetFirstNRows());
     }
 
     bool CheckTopNRowsCondition() const
     {
-        return !NeedsSorting() && m_querySpec->IsFlagSet(XmlQuerySpec::TopNRowsSpecified)
-            && (m_context->numRowsOutput > m_querySpec->GetTopNRows());
+        return !NeedsSorting() && m_querySpec->IsFlagSet(XmlQuerySpec::TopNRowsSpecified) &&
+            (m_context->numRowsOutput > m_querySpec->GetTopNRows());
     }
 
 private:

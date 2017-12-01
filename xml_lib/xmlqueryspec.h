@@ -709,14 +709,12 @@ private:
         }
 
         // Catch the case where we are trying to make a function of an input/join path and a aggregate
-        // expression. e.g. foo+sum[bar] (note literals are fine, like 1+sum[bar]). This isn't supported.
-        if ((expr->flags & XmlExpr::SubtreeContainsAggregate && expr->flags & XmlExpr::SubtreeContainsPathRef)) {
-            XmlUtils::Error("Columns can't be functions of both aggregates and path references");
-        }
-
-        // Sorting aggregates isn't supported either.
-        if ((op->opcode == XmlOperator::OpSort) && (expr->flags & XmlExpr::SubtreeContainsAggregate)) {
-            XmlUtils::Error("Can't sort using aggregates");
+        // expression. e.g. foo+sum[bar].  This isn't supported. (Note literals are fine, like 1+sum[bar]).
+        // Sort is exempted from this restriction, because we explicitly handle it in the query in order to
+        // have arguments that are mixtures of aggregates and non-aggregates.
+        if (op->opcode != XmlOperator::OpSort && 
+            (expr->flags & XmlExpr::SubtreeContainsAggregate && expr->flags & XmlExpr::SubtreeContainsPathRef)) {
+            XmlUtils::Error("Columns can't be functions of both aggregates and non-aggregates");
         }
     }
 
@@ -727,7 +725,7 @@ private:
         // Synthesize a join query column
         int columnNum = (int)m_joinSpec.columns.size() + 1;
         std::string columnName = std::string("__joincolumn_") + XmlUtils::ToString(columnNum);
-        XmlColumnPtr column( new XmlColumn(columnName, expr, XmlColumn::Output | XmlColumn::JoinedColumn) );
+        XmlColumnPtr column(new XmlColumn(columnName, expr, XmlColumn::Output | XmlColumn::JoinedColumn));
         m_joinSpec.columns.push_back(column);
 
         // The hoisted expression now lives under a column owned by JoinSpec, which will
