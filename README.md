@@ -1,11 +1,9 @@
 # proj
-Fast xml/json/log/csv queries without leaving the command line.  Documentation is forthcoming.  
+Fast xml/json/log/csv queries without leaving the command line. 
 
-Until then, check out my introductory writeup in this repo's wiki: https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.
+This repo is quite new, and documentation is forthcoming. Until then, check out my introductory writeup in this repo's wiki: https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.  In addition, there are unit tests that serve as examples.
 
-In addition, there are unit tests that serve as examples.
-
-The project is built using g++ with C++11 support, and the resulting binary can be moved to a common location.
+The repo is built using g++ with C++11 support, and the resulting binary can be moved to a common location.
 
 ```
 $ make release
