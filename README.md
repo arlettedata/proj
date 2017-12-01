@@ -1,7 +1,7 @@
 # proj
 Fast xml/json/log/csv queries without leaving the command line.  Documentation is forthcoming.  
 
-Until then, check out my introductory writeup in the this repo's wiki.
+Until then, check out my introductory writeup in this repo's wiki: https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.
 
 In addition, there are unit tests that serve as examples.
 
