@@ -1,0 +1,2 @@
+ "Profit in $1000's":"$"&round[sum[profit]/1000,2]&"K"
+ 
