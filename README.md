@@ -18,10 +18,10 @@ Hello, world
 ```
 which can be treated as a CSV file.
 
-Tests are included.  To run them, node must first be installed (assuming MacOS here):
+Tests are included.  To run them, node.js must first be installed (assuming MacOS here):
 
 ```
-$ brew install 
+$ brew install node
 $ node tests
 ```
 
