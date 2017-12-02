@@ -1,8 +1,12 @@
-# proj
-Fast xml/json/log/csv queries without leaving the command line. 
+# Overview
+**proj**: fast xml/json/log/csv queries without leaving the command line. 
 
-This repo is quite new, and documentation is forthcoming. Until then, check out my introductory writeup in this repo's wiki: https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.  In addition, there are unit tests that serve as examples.
+This repo is quite new, and documentation is forthcoming.  Until then, please refer to the following resources:
+1. A [11-step tutorial](https://github.com/arlettedata/proj/blob/master/tutorial/TUTORIAL.md).
+2. An introductory/historical writeup in this repo's [wiki](https://github.com/arlettedata/proj/wiki/Proj.--The-initial-wiki-entry.).
+3. [Unit tests](https://github.com/arlettedata/proj/tree/master/tests) you can scrape for examples.
 
+# Build
 The repo is built using g++ with C++11 support, and the resulting binary can be moved to a common location.
 
 ```
@@ -18,7 +22,8 @@ Hello, world
 ```
 which can be treated as a CSV file.
 
-Tests are included.  To run them, node.js must first be installed (assuming MacOS here):
+# Test
+Unit tests are included.  To run them, node.js must first be installed (assuming MacOS here):
 
 ```
 $ brew install node
