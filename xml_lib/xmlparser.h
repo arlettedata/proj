@@ -381,7 +381,7 @@ public:
                         m_context->nodeStack.pop_back();
                     }
 
-                    if (XmlUtils::ControlCIssued()) {
+                    if (ControlCIssued()) {
                         m_query->SetFlags(XmlQuery::ParseStopped);
                     }
 
@@ -727,7 +727,7 @@ private:
         InEndTag
     } m_tagState;
     
-    XmlUtils::ControlCHandler m_controlChandler;
+    ControlCHandler m_controlChandler;
 
     XmlParser(const XmlParser&); // copy constructor not implemented
     const XmlParser& operator=(const XmlParser&); // assignment operator not implemented

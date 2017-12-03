@@ -1,2 +1,2 @@
-Example: cat file.json | proj id sum[cost]
-For complete documentation, open README.MD.
+Example: cat tutorial/orders.csv | proj category sum[sales]
+For more information, open README.MD.

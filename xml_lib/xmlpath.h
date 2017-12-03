@@ -420,7 +420,7 @@ public:
                 std::stringstream out;
                 std::string line;
                 bool firstLine = true;
-                while (std::getline(in, line)) {
+                while (XmlUtils::GetLine(in, line)) {
                     if (!firstLine) {
                         pos = &line[0];
                         for (int n = 0; isspace((unsigned char)*++pos) && (n < indentLength); n++)

@@ -6,8 +6,8 @@ int main(int argc, char* argv[])
         StreamingXml::XmlDriver driver;
         bool showUsage = driver.Initialize(argc, argv);
         if (showUsage) {
-            std::cout << "Example: cat file.json | proj id sum[cost]" << std::endl;
-            std::cout << "For complete documentation, open README.MD." << std::endl;
+            std::cout << "Example: cat tutorial/orders.csv | proj category sum[sales]" << std::endl;
+            std::cout << "For more information, open README.MD." << std::endl;
             return 0;
         }
         return driver.Run();

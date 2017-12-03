@@ -146,14 +146,14 @@ private:
                     ? columnArg.substr(1) 
                     : columnArg.substr(0, columnArg.size() - 1);
                 if (argFile.empty()) {
-                    XmlUtils::Error("Missing argument-inclusion filename after @"); // covered
+                    XmlUtils::Error("Missing argument-inclusion filename after @"); /**/
                 }
                 std::ifstream input(argFile);
                 if (input.fail()) {
-                    XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile); // covered
+                    XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile); /**/
                 }
                 std::string line;
-                while (std::getline(input, line)) {
+                while (XmlUtils::GetLine(input, line)) {
                     ReadColumnSpecs(XmlUtils::Split(line));
                 }
             }
@@ -300,10 +300,13 @@ private:
 
         // scan until we find a log line
         int numLinesToSeek = 10; // allow 9 non-log lines before we pick up the first log line
-        while (numLinesToSeek-- > 0 && std::getline(*m_input, line)) {
+        while (numLinesToSeek-- > 0 && XmlUtils::GetLine(*m_input, line)) {
             if (!backBuffer.empty()) {
                 line = backBuffer + line;
                 backBuffer.clear();
+            }
+            if (line.empty() && m_input->eof()) {
+                break;
             }
             if (ParseLogLine(line, next_dt, next_level, next_category, next_msg)) {
                 break;
@@ -314,14 +317,14 @@ private:
             return false;
         }
             
-        while (*m_input) {
+        while (!m_input->eof()) {
             XmlDateTime dt = next_dt;
             std::string level = std::move(next_level);
             std::string category = std::move(next_category);
             std::string msg = std::move(next_msg);
 
             // Append non-log lines to msg. If we see a log line, jump to top of log line parser loop.
-            while (std::getline(*m_input, line)) {
+            while (XmlUtils::GetLine(*m_input, line)) {
                 if (ParseLogLine(line, next_dt, next_level, next_category, next_msg)) {
                     break;
                 }
@@ -388,7 +391,7 @@ private:
                 backLines.pop();
                 return true;
             }
-           return !!std::getline(*this->m_input, line);
+            return XmlUtils::GetLine(*this->m_input, line);
         };
 
         std::string firstLine;

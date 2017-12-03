@@ -435,29 +435,69 @@ private:
         m_tokens.reset(new XmlQueryTokenizer(columnSpec));
         explicitNames = false;
         std::vector<std::string> names;
-        bool expectMoreNames = false;
+        bool expectMoreNames = false, foundColon = false, parsingNames = true;
         do {
             std::string name;
-            TokenId t0 = Lookahead(0).id, t1 = Lookahead(1).id;
-            if ((t0 == TokenId::Id || t0 == TokenId::StringLiteral || t0 == TokenId::Spread) &&
-                (t1 == TokenId::Colon || t1 == TokenId::Comma)) {
-                name = GetExpectedNext(t0).str;
-                GetExpectedNext(t1);
-                explicitNames = true;
-                expectMoreNames = (t1 == TokenId::Comma);
+            TokenId token = Lookahead(0).id;
+            switch (token) {
+                case TokenId::Id:
+                case TokenId::StringLiteral:
+                case TokenId::Spread:
+                    name = GetExpectedNext(token).str;
+                    break;
+                case TokenId::LBrace:
+                    GetExpectedNext(TokenId::LBrace);
+                    name = ParseUnquotedString(TokenId::RBrace);
+                    GetExpectedNext(TokenId::RBrace);
+                    break;
             }
-            else {
+            if (name.empty()) {
                 if (expectMoreNames) {
                     XmlUtils::Error("Expected a column name after comma");
                 }
-                name = columnSpec; // default name is original input
+                break;
             }
-            size_t num = GetColumnIndex(name);
-            if (num != npos) {
+            if (std::find(names.begin(), names.end(), name) != names.end()) {
                 XmlUtils::Error("Duplicate column name: %s", name);
             }
             names.push_back(name);
+            token = Lookahead(0).id;
+            switch (token) {
+                case TokenId::Comma:
+                    GetExpectedNext(token);
+                    explicitNames = true;
+                    expectMoreNames = true;
+                    break;
+                case TokenId::Colon:
+                    GetExpectedNext(token);
+                    explicitNames = true;
+                    foundColon = true;
+                    expectMoreNames = false;
+                    break;
+                default:
+                    parsingNames = false;
+                    break;
+            } 
         } while (expectMoreNames);
+
+        if (!foundColon) {
+            // no names were parsed (we were looking at column expression tokens), so roll back the tokenizer
+            // go with a default name 
+            m_tokens.reset(new XmlQueryTokenizer(columnSpec));
+            explicitNames = false;
+            names.clear();
+            if (GetColumnIndex(columnSpec) != npos) {
+                XmlUtils::Error("Duplicate column: %s", columnSpec);
+            }
+            names.push_back(columnSpec); // go with the default name, the full column spec
+        }
+
+        for (auto& name : names) {
+            if (GetColumnIndex(name) != npos) {
+                XmlUtils::Error("Duplicate column name: %s", name);
+            }
+        }
+
         return std::move(names);
     }
 

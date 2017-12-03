@@ -56,8 +56,8 @@ private:
 };
 
 enum JsonToken {
-	TOKEN_NONE, TOKEN_OPENBRACE, TOKEN_CLOSEBRACE, TOKEN_OPENBRACKET, TOKEN_CLOSEBRACKET,
-	TOKEN_LESSTHAN, TOKEN_COMMA, TOKEN_COLON, TOKEN_STRING, TOKEN_VALUE, TOKEN_LINEFEED, TOKEN_EOF, TOKEN_INVALID
+	TOKEN_NONE, TOKEN_OPENBRACE, TOKEN_CLOSEBRACE, TOKEN_OPENBRACKET, TOKEN_CLOSEBRACKET, TOKEN_LESSTHAN, 
+	TOKEN_COMMA, TOKEN_COLON, TOKEN_STRING, TOKEN_VALUE, TOKEN_LINEBREAK, TOKEN_EOF, TOKEN_INVALID
 };
 
 enum States { STATE_TOP, STATE_START, STATE_READCOLON, STATE_READVALUE, STATE_ARRAY };
@@ -150,11 +150,12 @@ public:
                     return ParseObject(m_topTag, 0, m_leaveOuterTagOpen);
 
                 case TOKEN_OPENBRACKET:
-                    if (!m_possiblyLog)
+                    if (!m_possiblyLog) {
                         goto def;
+                    }
                     do {
                         token = GetNextToken(value);
-                    } while (token == TOKEN_LINEFEED);
+                    } while (token == TOKEN_LINEBREAK);
                     #pragma warning(disable:4996)
                     int year, month, day;
                     if (3 == sscanf(value.c_str(), "%d-%d-%d", &year, &month, &day)) {
@@ -181,7 +182,7 @@ public:
                     break;
 
                 case TOKEN_EOF:
-                case TOKEN_LINEFEED:
+                case TOKEN_LINEBREAK:
                     break;
 
                 default:
@@ -196,19 +197,49 @@ private:
 	char getch()
 	{
 		m_lastChar = m_currChar;
-		m_currChar = m_in->get();
-		if( m_possiblyXml || m_possiblyLog ) {
-			m_backBuffer += m_currChar;
-		}
+        m_currChar = m_in->get();
+        pushBackBuffer(m_currChar);
 		m_charCount++;
-		if (m_currChar == '\n') {
+		if (m_currChar == 13) { 
+            char saveLastChar = m_lastChar;
+            char saveCurrChar = m_currChar;
+            int nextChar = getch(); 
+            m_lastChar = saveLastChar;
+            // peek ahead to see if this is a DOS (CRLF) or MAC (CR) newline
+            if (nextChar == 10) {
+                // DOS newline: normalize to a UNIX (LF) newline character, fixup the backbuffer so 13 is gone
+                popBackBuffer();
+                popBackBuffer();
+                pushBackBuffer(10);
+                m_currChar = nextChar;
+            } 
+            else {
+                m_lineCount++;
+                // MAC newline: use the MAC (CR) newline character
+                ungetch();
+                m_currChar = saveCurrChar;
+            }
+		}
+		else if (m_currChar == 10) { 
+            // UNIX newline: use the UNIX (LF) newline character
 			m_lineCount++;
 		}
-		if (m_currChar == '\r') {
-			return getch(); // ignore the '\r'
-		}
-		if ((m_currChar >= 0x0 && m_currChar < 0x10) && (m_currChar != '\n')) {
+		else if (m_currChar >= 0x0 && m_currChar < 0x10) {
 			throw illegal_char_exception(m_currChar); // json, thankfully, disallows control characters, so this lets us detect truncated input
+		}
+		return m_currChar;
+	}
+
+	void ungetch()
+	{
+        m_in->unget();
+        popBackBuffer();
+    }
+
+    void pushBackBuffer(int ch) 
+    {
+		if (m_possiblyXml || m_possiblyLog) {
+            m_backBuffer += m_currChar;
 		}
 #ifdef _DEBUG
 		m_recallBuffer += m_currChar;
@@ -216,14 +247,12 @@ private:
 			m_recallBuffer = m_recallBuffer.substr(128);
 		}
 #endif
-		return m_currChar;
-	}
+    }
 
-	void ungetch()
-	{
-		m_in->unget();
-		if( (m_possiblyXml || m_possiblyLog) && m_backBuffer.length() > 0 ) {
-			m_backBuffer.pop_back();
+    void popBackBuffer() 
+    {
+		if( (m_possiblyXml || m_possiblyLog) && m_backBuffer.length() > 0) {
+            m_backBuffer.pop_back();
 		}
 #ifdef _DEBUG
 		if (m_recallBuffer.size())
@@ -291,8 +320,8 @@ private:
         while (!done) {
             auto ch = getch();
             switch (ch) {
-                case '\r':
-                case '\n':
+                case 10: // DOS (we skipped past the \r) or UNIX newline
+                case 13: // MAC newline
                 case ' ':
                 case ',':
                 case '}':
@@ -345,7 +374,7 @@ private:
             case TOKEN_VALUE:
                 msg << "Value(" << value << ")";
                 break;
-            case TOKEN_LINEFEED:
+            case TOKEN_LINEBREAK:
                 msg << "<LF>";
                 break;
             case TOKEN_EOF:
@@ -376,13 +405,13 @@ private:
                 msg << "<unknown state: " << state << ">";
         }
         msg << std::endl;
-    #ifdef _DEBUG
+#ifdef _DEBUG
         // feed more characters into the recall buffer
         for (int i = 0; i < 32; i++) {
             getch();
         }
         msg << "Input region: " << m_recallBuffer;
-    #endif
+#endif
         throw unexpected_token_exception(msg.str());
     }
 
@@ -423,10 +452,11 @@ private:
                 case '\'':
                     value = ReadString(ch);
                     return TOKEN_STRING;
+                case 10: // DOS (we skipped past the \r) or UNIX newline
+                case 13: // MAC newline
+                    return TOKEN_LINEBREAK;
                 case -1:
                     return TOKEN_EOF;
-                case '\n':
-                    return TOKEN_LINEFEED;
                 default:
                     if (ch >= 0 && ch < 32) {
                         continue;
@@ -527,7 +557,7 @@ private:
                     name = "";
                     break;
 
-                case TOKEN_LINEFEED:
+                case TOKEN_LINEBREAK:
                     break;
 
                 case TOKEN_EOF:
@@ -597,7 +627,7 @@ private:
                     }
                     break;
 
-                case TOKEN_LINEFEED:
+                case TOKEN_LINEBREAK:
                     break;
 
                 case TOKEN_EOF:
@@ -644,7 +674,7 @@ private:
                 case TOKEN_COMMA:
                     break; // commas are not informative in our implementation, and we don't check for misplaced commas
 
-                case TOKEN_LINEFEED:
+                case TOKEN_LINEBREAK:
                     break;
 
                 case TOKEN_EOF:

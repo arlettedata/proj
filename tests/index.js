@@ -18,18 +18,19 @@ process.argv.shift();
 // Walk up directories looking for a build of proj
 let projDir = process.cwd();
 while (projDir) {
-    const path = Path.join(projDir, "proj");
+    const path = Path.join(projDir, "bin", "proj");
     if (fs.existsSync(path)) {
+        binDir = Path.join(projDir, "bin");
         break;
     }
     projDir = Path.dirname(projDir);
 }
 if (!projDir) {
-    throw "Error: proj build not found (won't use the one under /usr).";
+    throw "Error: proj build not found (won't use the deployed one under /usr/bin/local).";
 }
 
 // Modify the path so that we point to our build of proj
-process.env.PATH = projDir + ":" + process.env.PATH;
+process.env.PATH = binDir + ":" + process.env.PATH;
 
 async function getTestPaths(inputPaths) {
     let paths = [];
@@ -179,7 +180,7 @@ async function main() {
                 } else if (actOut !== expOut) {
                     fs.writeFileSync(actOutPath, actOut, "utf8");
                     console.error("  Failure:");
-                    console.error(`    diff ${expOutPath} ${actOutPath}`);
+                    console.error(`    diff ${expOutPath} ${actOutPath} `);
                     failures++;
                 } else {
                     passes++;
@@ -193,9 +194,9 @@ async function main() {
     console.log("Baselines set: " + baselines);
 }
 
-// If no args, assume we search for test cases under the ./tests directory.
+// If no args, assume we search for test cases under the tests sundirectory.
 if (process.argv.length == 0) {
-    process.argv = ["./tests"];
+    process.argv = [Path.join(projDir, "tests")];
 }
 
 // Run
