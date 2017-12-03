@@ -133,7 +133,7 @@ As we can see with all the character escaping clutter, we're fighting Bash a lot
 
 Simplified input with a descending `sort` thrown in:
 ```
-cat orders.csv | proj Segment @profitArg sort[-profit]
+cat orders.csv | proj Segment @profitArg sort[-sum[profit]]
 ```
 Output:
 ```Segment,Profit in $1000's
