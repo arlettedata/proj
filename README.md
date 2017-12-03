@@ -12,13 +12,13 @@ The repo is built using g++ with C++11 support, and the resulting binary can be 
 ```
 $ make release
 $ cp proj /usr/local/bin
-$ echo "<greeting>Hello, world</greeting>" | proj greeting
+$ echo "<greeting>Hello World!</greeting>" | proj greeting
 ```
 
 The last command above should output:
 ```
 greeting
-Hello, world
+Hello World!
 ```
 which can be treated as a CSV file.
 
