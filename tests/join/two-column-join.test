@@ -1,0 +1,1 @@
+in[cars.json] join[features.csv] where[make==right::make] where[type==right::type] make right::model type right::camera right::warranty

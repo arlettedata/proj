@@ -885,19 +885,18 @@ public:
 
             case Opcode::OpColumnRef: {
                 XmlColumnPtr column = expr->GetColumnRef();
-                if (column->flags & XmlColumn::JoinedColumn && m_context->joinTable) {
-                    if (m_context->emptyOuterJoin) {
-                        expr->SetValue(XmlValue());
-                    } 
-                    else {
-                        assert(m_context->joinTable);
-                        const XmlRows& joinTable = *m_context->joinTable;
-                        size_t rowIdx = m_context->joinTableRowIdx;
-                        assert(rowIdx != -1 && rowIdx < joinTable.size());
-                        size_t colIdx = column->index;
-                        assert(colIdx < joinTable[rowIdx].size());
-                        expr->SetValue(joinTable[rowIdx][colIdx]); 
-                    }
+                bool joinedColumn = !!(column->flags & XmlColumn::JoinedColumn);
+                if (joinedColumn && m_context->emptyOuterJoin) {
+                    expr->SetValue(XmlValue()); // empty value
+                }
+                else if (joinedColumn && m_context->joinTable) {
+                    assert(m_context->joinTable);
+                    const XmlRows& joinTable = *m_context->joinTable;
+                    size_t rowIdx = m_context->joinTableRowIdx;
+                    assert(rowIdx != -1 && rowIdx < joinTable.size());
+                    size_t colIdx = column->index;
+                    assert(colIdx < joinTable[rowIdx].size());
+                    expr->SetValue(joinTable[rowIdx][colIdx]); 
                 }
                 else {
                     if (m_context->passType == XmlPassType::StoredValuesPass && 

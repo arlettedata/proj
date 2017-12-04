@@ -1,0 +1,1 @@
+--in=sales.csv inv:join[items.xml] where[item==inv::id] desc:inv::desc {num-items}:sum[int[qty]] total:sum[price]

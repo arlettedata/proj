@@ -1,0 +1,12 @@
+# input file is a CSV file with no header
+--in=county-fips-codes.csv --inheader=false 
+
+# join file is also a CSV file with no header
+--join=state-abbreviations.csv --joinheader=false  
+
+# join by the state abbreviation
+where[right::{2}=={1}]
+
+# Output County name, State name, and concatenation of state fips and county fips.
+# with column names "County," "State," and "FIPS Code."
+County:{4} State:right::{1} {FIPS\ Code}:{2}&{3} 

@@ -133,6 +133,7 @@ public:
             const char* beg = pos;
             bool inQuotes = false;
             bool escaping = false;
+            char endQuote;
             while ((inQuotes || escaping || (strchr(delims, *pos) == 0)) && (*pos != '\0')) {
                 if (escaping) {
                     escaping = false;
@@ -140,8 +141,9 @@ public:
                 else if (*pos == '\\') {
                     escaping = true;
                 }
-                else if (quoters.find(*pos) != std::string::npos) {
+                else if (quoters.find(*pos) != std::string::npos || (inQuotes && *pos == endQuote)) {
                     inQuotes = !inQuotes;
+                    endQuote = *pos == '{' ? '}' : *pos;
                 }
                 pos++;
             }

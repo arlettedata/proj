@@ -12,13 +12,13 @@
                 <b>b2</b>
             </data>
         </section>
-        <name>g1-2</name>
+        <name>group1</name>
     </group>
     <group>
         <data>
             <a>a3</a>
             <b>b3</b>
         </data>
-        <name>g3</name>
+        <name>group2</name>
     </group>
 </top>

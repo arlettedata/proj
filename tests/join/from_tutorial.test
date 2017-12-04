@@ -1,0 +1,1 @@
+--in=../../tutorial/orders.csv Returns:join[../../tutorial/returns.csv] where[orderid==Returns::orderid] Category {Sub-Category} count[orderid] sort[Category] outheader[false]

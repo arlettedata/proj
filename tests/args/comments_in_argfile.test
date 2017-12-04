@@ -1,0 +1,19 @@
+# add a b and c
+a+b+c
+
+#multiply them
+a*b*c
+
+max[a,max[b,c]] # and take their max
+
+# hashtags using double quotation marks are not comments
+"#"
+
+# hashtags using single quotation marks are not comments
+'#'
+
+# hashtags using single quotation marks are not comments
+{#}:a
+
+# specify input file
+--in=data.xml

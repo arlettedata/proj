@@ -1,0 +1,1 @@
+--in=cars.json join[colors.json] make type color:right::json.*

@@ -1,0 +1,1 @@
+--in=counties.mac.csv inheader[false] name:{1} state:{2} where[state=="Washington"]

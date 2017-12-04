@@ -1,0 +1,37 @@
+[
+    {
+        "make": "Ford",
+        "type": "sedan",
+        "color": "B"
+    },
+    {
+        "make": "Volvo",
+        "type": "sedan",
+        "color": "R"
+    },
+    {
+        "make": "Ford",
+        "type": "sedan",
+        "color": "X"
+    },
+    {
+        "make": "Volvo",
+        "type": "sedan",
+        "color": "C"
+    },
+    {
+        "make": "BMW",
+        "type": "sedan",
+        "color": "W"
+    },
+    {
+        "make": "Cadillac",
+        "type": "SUV",
+        "color": "S"
+    },
+    {
+        "make": "Ford",
+        "type": "SUV",
+        "color": "T"
+    },
+]

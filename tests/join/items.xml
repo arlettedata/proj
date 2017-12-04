@@ -1,0 +1,32 @@
+<items>
+    <item>
+        <id>1</id>
+        <desc>Yo-yo</desc>
+        <colorcode>R</colorcode>
+    </item>
+    <item>
+        <id>2</id>
+        <desc>Slinky</desc>
+        <colorcode>G</colorcode>
+    </item>
+    <item>
+        <id>3</id>
+        <desc>Ball</desc>
+        <colorcode>Y</colorcode>
+    </item>
+    <item>
+        <id>4</id>
+        <desc>Fidget Spinner</desc>
+        <colorcode>R</colorcode>
+    </item>
+    <item>
+        <id>5</id>
+        <desc>Train</desc>
+        <colorcode>B</colorcode>
+    </item>
+    <item>
+        <id>5</id>
+        <desc>Train</desc>
+        <colorcode>G</colorcode>
+    </item>
+</items>

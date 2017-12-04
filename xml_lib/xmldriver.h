@@ -154,7 +154,11 @@ private:
                 }
                 std::string line;
                 while (XmlUtils::GetLine(input, line)) {
-                    ReadColumnSpecs(XmlUtils::Split(line));
+                    // Truncate at unquoted comment character
+                    std::vector<std::string> splitAtComments = std::move(XmlUtils::Split(line, "#", "{\"'", true /*insertGaps*/));
+                    if (splitAtComments.size()) {
+                        ReadColumnSpecs(XmlUtils::Split(splitAtComments[0], " "));
+                    }
                 }
             }
             else {

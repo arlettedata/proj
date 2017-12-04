@@ -1,0 +1,1 @@
+--in=nums.csv join[nums.csv] a sum[int[right::a]]

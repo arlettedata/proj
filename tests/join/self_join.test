@@ -1,0 +1,1 @@
+in[data.xml] self:join[data.xml] {group-name}:self::name a b where[nodenum[group]==nodenum[self::group]]
