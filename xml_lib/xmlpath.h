@@ -243,7 +243,7 @@ public:
             }
             m_tagList.push_back(std::move(Tag(tag, wildcard, i == 0, i == tags.size() - 1)));
         }                        
-        if (m_pathRef->flags & XmlPathRef::NoData) {
+        if (m_pathRef->flags & XmlPathRef::NoData && !(m_pathRef->flags & XmlPathRef::Data)) {
             m_flags |= XmlPath::NoData;
         }
         if (m_pathRef->flags & XmlPathRef::Sync) {

@@ -807,8 +807,8 @@ struct XmlPathRef
     enum Flags
     {
         Matched = 0x1,
-        NoData = 0x2,
-        AppendData = 0x4,
+        Data = 0x2, // This path ref appears in a context that yields data (e.g. <a>1</a>)
+        NoData = 0x4, // This path ref appears in a context that is just matched, but doesn't itself yield data (e.g. nodenum(a))
         Sync = 0x8,
         Joined = 0x10
     };

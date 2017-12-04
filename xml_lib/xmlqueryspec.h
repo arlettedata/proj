@@ -247,7 +247,7 @@ public:
         for (auto& columnSpec : columnSpecs) {
             bool explicitNames;
             // The only time more than one name is valid is on a pivot; we will check for this.
-            std::vector<std::string> names = ParseColumnNames(columnSpec, explicitNames);
+            std::vector<std::string> names = std::move(ParseColumnNames(columnSpec, explicitNames));
             for (auto& name : names) {
                 // only create column references to explicitly named columns
                 m_allColumnNames.push_back(explicitNames ? name : emptyName); 
@@ -264,6 +264,7 @@ public:
             auto& columnOverride = overridesPerColumn[idx];
             m_currentColumnNames = std::move(namesPerColumn[idx]);
             XmlColumnPtr column = ParseColumnExpr(columnSpec);
+            ProcessExprs(column, column->expr);
             if(!columnOverride.first.empty()) {
                 column->name = columnOverride.first;
             }
@@ -276,20 +277,15 @@ public:
             idx++;
         }
 
-        PostProcessRefs();
+        ProcessRefs();
 
         if (m_pivotColumn) {
             assert(pivotColumnNames.size() > 0);
             pivoter.BindColumns(m_pivotColumn, pivotColumnNames);
         }
         
-        for (auto& column : m_columns) {
-            XmlExprPtr expr = column->expr;
-            ValidateStructureAndHoistJoinColumns(expr);
-            if (expr->flags & XmlExpr::SubtreeContainsJoinPathRef) {
-                column->expr = HoistJoinExpr(expr);
-            }
-        }
+        ProcessColumns();
+        GatherJoinEqualities();
         
         m_flags |= ColumnsAdded;
     }
@@ -305,7 +301,7 @@ public:
         }
         
         // Direcly add the path refs and columns as recorded into a JoinSpec by
-        // XmlQuerySpec::ParseColumnSpecs/PostProcessRefs, in the main instance of XmlQuerySpec.
+        // XmlQuerySpec::ParseColumnSpecs/ProcessRefs, in the main instance of XmlQuerySpec.
         m_inputSpec.pathRefs = joinSpec.pathRefs;
         for (auto& column : joinSpec.columns) {
             assert(column->flags & XmlColumn::Output && column->flags & XmlColumn::JoinedColumn);
@@ -319,100 +315,6 @@ public:
     }
 
 private:
-    // This is called after all the columns have been parsed, particularly because we resolve 
-    // Column references
-    void PostProcessRefs() {
-
-        if (m_inputSpec.pathRefs.size() == 0) {
-            if (m_flags & LeftSideOfJoin) {
-                XmlUtils::Error("A join requires at least one input path reference");
-            }
-            if (m_sortColumn) {
-                XmlUtils::Error("A sort requires at least one input path reference");
-            }
-            if (m_flags & DistinctUsed) {
-                XmlUtils::Error("Use of distinct requires at least one input path reference");
-            }
-        }
-
-        if (m_joinSpec.pathRefs.size() == 0) {
-            if (m_flags & LeftSideOfJoin) {
-                XmlUtils::Error("A join requires at least one joined path reference");
-            }
-        }
-
-        for (auto& it : m_inputSpec.pathRefs) {
-            XmlPathRefPtr pathRef = it.second;
-            if (pathRef->flags & XmlPathRef::AppendData) {
-                pathRef->flags &= ~XmlPathRef::NoData;
-            }
-        }
-
-        for (auto& expr : m_exprs) {
-            XmlOperatorPtr op = expr->GetOperator();
-            if (op->flags & XmlOperator::ImmedEvaluate) {
-                XmlPathRefPtr pathRef = expr->GetArg(0)->GetPathRef();
-                if (!pathRef) {
-                    XmlUtils::Error("First argument must be a path reference");
-                }
-                if (op->flags & XmlOperator::StartMatchEval) {
-                    pathRef->startMatchExprs.push_back(expr);
-                }
-                else {
-                    pathRef->endMatchExprs.push_back(expr);
-                }
-                if (pathRef->flags & XmlPathRef::Joined) {
-                    m_joinSpec.flags |= NodeStackRequired;
-                }
-                else {
-                    m_flags |= NodeStackRequired;
-                }
-            }
-
-            Opcode opcode = expr->GetOperator()->opcode;
-            switch (opcode) {
-                case Opcode::OpColumnRef: {
-                    // This is a temporary reference created in ParseRef, to be resolved now since 
-                    // all the columns have been parsed.
-                    const std::string& colName = expr->GetColumnRef()->name;
-                    XmlColumnPtr column = GetColumn(colName);
-                    assert(column); // we should find it
-                    while (column->expr->GetColumnRef()) {
-                        XmlColumnPtr nextColumn = GetColumn(column->expr->GetColumnRef()->name);
-                        assert(nextColumn);
-                        if (nextColumn->name == colName) {
-                            XmlUtils::Error("Circular column reference: %s", colName);
-                        }
-                        column = nextColumn;
-                    }
-                    expr->SetColumnRef(column); // replace temporary column ref with the real column ref
-                    break;
-                }
-
-                case Opcode::OpWhere:
-                    // collect all unique joined path refs that appear on one side of a where[LHS==RHS]. 
-                    // We will use this information to index the join rows for efficiency.
-                    // In addition, collect the expressions on the other side side of the equality, 
-                    // since we'll be using those to compute the index key from each of the input rows.
-                    // To make the code more readable, these are in separate vectors rather than in a pair.
-                    for (size_t eqOperand = 0; eqOperand <= 1; eqOperand++) {
-                        XmlExprPtr pred = expr->GetArg(0);
-                        if (pred->GetOperator()->opcode == Opcode::OpEQ) {
-                            XmlExprPtr arg = pred->GetArg(eqOperand);
-                            XmlColumnPtr column = arg->GetColumnRef();
-                            if (column && (column->flags & XmlColumn::JoinedColumn)) {
-                                column->flags |= XmlColumn::Indexed;
-                                m_joinSpec.equalityExprs.push_back(pred->GetArg(1 - eqOperand)); // record other operand
-                                break;
-                            }
-                        }
-                    }
-                    expr->flags |= XmlExpr::JoinEqualityWhere;
-                    break;
-            }
-        }
-    }
-
     void UpdateColumnIndices()
     {
         m_numValueColumns = 0;
@@ -445,6 +347,7 @@ private:
                 case TokenId::Spread:
                     name = GetExpectedNext(token).str;
                     break;
+
                 case TokenId::LBrace:
                     GetExpectedNext(TokenId::LBrace);
                     name = ParseUnquotedString(TokenId::RBrace);
@@ -468,12 +371,14 @@ private:
                     explicitNames = true;
                     expectMoreNames = true;
                     break;
+
                 case TokenId::Colon:
                     GetExpectedNext(token);
                     explicitNames = true;
                     foundColon = true;
                     expectMoreNames = false;
                     break;
+
                 default:
                     parsingNames = false;
                     break;
@@ -486,15 +391,12 @@ private:
             m_tokens.reset(new XmlQueryTokenizer(columnSpec));
             explicitNames = false;
             names.clear();
-            if (GetColumnIndex(columnSpec) != npos) {
-                XmlUtils::Error("Duplicate column: %s", columnSpec);
-            }
             names.push_back(columnSpec); // go with the default name, the full column spec
         }
 
         for (auto& name : names) {
             if (GetColumnIndex(name) != npos) {
-                XmlUtils::Error("Duplicate column name: %s", name);
+                XmlUtils::Error("Duplicate column%s: %s", explicitNames ? " name" : "", name);
             }
         }
 
@@ -503,6 +405,8 @@ private:
 
     XmlColumnPtr ParseColumnExpr(const std::string& columnSpec)
     {
+        m_tokens.reset(new XmlQueryTokenizer(columnSpec));
+        
         bool explicitNames;
         std::vector<std::string> columnNames = ParseColumnNames(columnSpec, explicitNames);
         std::string columnName = columnNames[0];
@@ -512,300 +416,9 @@ private:
         GetExpectedNext(TokenId::End);
 
         XmlColumnPtr column(new XmlColumn(columnName, expr));
-        m_currentColumn = column;
-
         XmlExprTypes::InferType(expr);
-        PostprocessColumnExprs(expr);
-
         m_tokens.reset();
-        m_currentColumn.reset();
-
         return column;
-    }
-
-    void PostprocessColumnExprs(XmlExprPtr expr, int depth = 0, bool noDataParent = false)
-    {
-        XmlOperatorPtr op = expr->GetOperator();
-        assert(op);
-
-        if (op->flags & XmlOperator::TopLevelOnly && depth > 0) {
-            XmlUtils::Error("Top-level expression only: %s", op->name);
-        }
-
-        if (op->flags & XmlOperator::OnceOnly) {
-            for (auto& expr : m_exprs) {
-                if (expr->GetOperator()->opcode == op->opcode) {
-                    XmlUtils::Error("Expression can only be used once: %s", op->name);
-                }
-            }
-        }
-
-        m_exprs.push_back(expr);
-        
-        if (op->flags & XmlOperator::Aggregate) {
-            m_currentColumn->flags |= XmlColumn::Aggregate;
-            expr->flags |= XmlExpr::SubtreeContainsAggregate;
-            m_flags |= AggregatesExist;
-            XmlAggregateOperator* aggrOp = dynamic_cast<XmlAggregateOperator*>(op.get());
-            aggrOp->aggrIdx = m_aggrCount++;
-        }
-
-        if (op->flags & XmlOperator::GatherData) {
-            m_flags |= GatherDataPassRequired;
-        }
-
-        size_t numArgs = expr->GetNumArgs();
-        switch (op->opcode) {
-            case Opcode::OpPathRef: {
-                XmlPathRefPtr pathRef = expr->GetPathRef();
-                expr->flags |= (pathRef->flags & XmlPathRef::Joined)
-                    ? XmlExpr::SubtreeContainsJoinPathRef
-                    : XmlExpr::SubtreeContainsInputPathRef;
-                if (noDataParent) {
-                    pathRef->flags |= XmlPathRef::NoData;
-                }
-                else {
-                    // used to void the NoData flag after all references are seen
-                    pathRef->flags |= XmlPathRef::AppendData; 
-                    pathRef->flags &= ~XmlPathRef::NoData;
-                }
-                break;
-            }
-
-            case Opcode::OpCase:
-                if ((numArgs == 0 || expr->GetArg(0)->GetValue().bval)) {
-                    XmlUtils::CaseSensitivityMode(true, true);
-                }
-                break;
-
-            case Opcode::OpAttr:
-                m_flags |= AttributesUsed;
-                break;
-
-            case Opcode::OpLineNum:
-                m_flags |= LineNumUsed;
-                break;
-
-            case Opcode::OpDistinct:
-                m_flags |= DistinctUsed;
-                break;
-
-            case Opcode::OpFirst:
-                m_firstNRows = (size_t)std::max((__int64_t)0, expr->GetArg(0)->GetValue().ival);
-                m_flags |= FirstNRowsSpecified;
-                break;
-
-            case Opcode::OpTop:
-                m_topNRows = (size_t)std::max((__int64_t)0, expr->GetArg(0)->GetValue().ival);
-                m_flags |= TopNRowsSpecified;
-                break;
-
-            case XmlOperator::OpPivot:
-                m_pivotColumn = m_currentColumn;
-                m_flags |= HasPivot;
-                break;
-
-            case XmlOperator::OpSort:
-                m_sortColumn = m_currentColumn;
-                for (size_t i = 0; i < numArgs; i++) {
-                    XmlExprPtr arg = expr->GetArg(i);
-                    m_reversedStringSorts.push_back(
-                        (arg->GetType() == XmlType::Unknown || arg->GetType() == XmlType::String) && 
-                        arg->GetOperator()->opcode == XmlOperator::OpNeg
-                    );
-                }
-                break;
-
-            case Opcode::OpInputHeader:
-                // if header is specified, the default is true, otherwise false
-                m_inputSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
-                break;
-
-            case Opcode::OpJoinHeader:
-                // if header is specified, the default is true, otherwise false
-                m_joinSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
-                break;
-
-            case Opcode::OpOutputHeader:
-                // if header is specified, the default is true, otherwise false
-                m_outputSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
-                break;
-
-            case Opcode::OpHelp:
-                m_flags |= ShowUsage;
-                break;
-
-            case Opcode::OpIn:
-                m_inputSpec.filename = expr->GetArg(0)->GetValue().sval;
-                break;
-
-            case Opcode::OpJoin:
-                m_joinSpec.filename = expr->GetArg(0)->GetValue().sval;
-                if (numArgs == 2) {
-                    m_joinSpec.outer = expr->GetArg(1)->GetValue().bval;
-                }
-                m_flags |= LeftSideOfJoin;
-                break;
-
-            case Opcode::OpSync:
-                expr->GetArg(0)->GetPathRef()->flags |= XmlPathRef::Sync;
-                break;
-
-            case Opcode::OpRoot:
-                m_rootNodeNum = expr->GetArg(0)->GetValue().ival;
-                break;
-        }
-
-        if (depth == 0) {
-            if (!(op->flags & XmlOperator::Directive)) {
-                m_currentColumn->flags |= XmlColumn::Output;
-            }
-            if (op->opcode == Opcode::OpWhere) {
-                expr->ChangeType(XmlType::Boolean);
-                m_currentColumn->flags |= XmlColumn::Filter;
-            }
-            if (op->opcode != Opcode::OpPivot) {
-                if (m_currentColumnNames.size() > 1) {
-                    XmlUtils::Error("Multiple column names only valid for pivot function");
-                }
-                if (m_currentColumnNames.size() == 1 && m_currentColumnNames[0] == "...") {
-                    XmlUtils::Error("Column name spread (...) only valid for pivot function");
-                }
-            }
-        }
-
-        noDataParent = (op->flags & XmlOperator::NoData) != 0;
-        for( size_t i = 0; i < expr->GetNumArgs(); i++ ) {
-            PostprocessColumnExprs( expr->GetArg(i), depth + 1, noDataParent );
-        }
-    };
-
-    void ValidateStructureAndHoistJoinColumns(XmlExprPtr expr) 
-    {
-        XmlOperatorPtr op = expr->GetOperator();
-        assert(op);
-
-        if (expr->flags & XmlExpr::Visited) {
-            // Column references makes the expression traversal DAG-like.
-            return;
-        }
-        expr->flags |= XmlExpr::Visited;
-
-        // Traverse children expressions, looking for the largest subexpressions that
-        // are functions of join ref paths, not not main input ref paths, and hoist
-        // them a join column.
-        auto RollupFlags = [](XmlExprPtr parent, XmlExprPtr child) {
-            if (child->flags & XmlExpr::SubtreeContainsAggregate) {
-                if (parent->GetOperator()->flags & XmlOperator::Aggregate) {
-                    XmlUtils::Error("Aggregate functions cannot be composed");
-                }
-                parent->flags |= XmlExpr::SubtreeContainsAggregate;
-            }
-            if (child->flags & XmlExpr::SubtreeContainsInputPathRef) {
-                parent->flags |= XmlExpr::SubtreeContainsInputPathRef;
-            }
-            if (child->flags & XmlExpr::SubtreeContainsJoinPathRef) {
-                // If the child is both a function of input path refs and join path refs
-                // then we failed to hoist out join path-dependent expressions.
-                assert(!(child->flags & XmlExpr::SubtreeContainsInputPathRef));
-                parent->flags |= XmlExpr::SubtreeContainsJoinPathRef;
-            }
-        };
-
-        // Traverse descendants  
-        if (op->opcode == Opcode::OpColumnRef) {
-            XmlExprPtr columnExpr = expr->GetColumnRef()->expr;
-            ValidateStructureAndHoistJoinColumns(columnExpr);
-            RollupFlags(expr, columnExpr);
-        } else {
-            for (size_t i = 0; i < expr->GetNumArgs(); i++) {
-                XmlExprPtr arg = expr->GetArg(i);
-                ValidateStructureAndHoistJoinColumns(arg); 
-                RollupFlags(expr, arg);
-            }
-        }
-
-        // Joined paths are to be hoisted before computing an aggregation or a function that is also
-        // a function of an input path.  We can accumulate larger subtrees containing multiple
-        // join path references (but no aggregations or input paths) before hoisting.
-        if ((expr->flags & XmlExpr::SubtreeContainsJoinPathRef) && 
-            (expr->flags & XmlExpr::SubtreeContainsInputPathRef || (op->flags & XmlOperator::Aggregate))) {
-            // If an expression argument is a joined path, and involving a joined path and either an a
-            // input path ref or an aggregation, hoist the join paths.
-            for (size_t i = 0; i < expr->GetNumArgs(); i++) {
-                XmlExprPtr arg = expr->GetArg(i);
-                if (arg->flags & XmlExpr::SubtreeContainsJoinPathRef) {
-                    XmlExprPtr newArg = HoistJoinExpr(arg);
-                    assert(!(newArg->flags & XmlExpr::SubtreeContainsJoinPathRef));
-                    expr->SetArg(i, newArg);
-                }
-            }
-            expr->flags &= ~XmlExpr::SubtreeContainsJoinPathRef; // undo rollup of this flag
-        }
-
-        // Aggregations "erase" input path dependendies.
-        if (op->flags & XmlOperator::Aggregate) {
-            expr->flags &= ~XmlExpr::SubtreeContainsInputPathRef;
-        }
-
-        // Catch the case where we are trying to make a function of an input/join path and a aggregate
-        // expression. e.g. foo+sum[bar].  This isn't supported. (Note literals are fine, like 1+sum[bar]).
-        // Sort is exempted from this restriction, because we explicitly handle it in the query in order to
-        // have arguments that are mixtures of aggregates and non-aggregates.
-        if (op->opcode != XmlOperator::OpSort && 
-            (expr->flags & XmlExpr::SubtreeContainsAggregate && expr->flags & XmlExpr::SubtreeContainsPathRef)) {
-            XmlUtils::Error("Columns can't be functions of both aggregates and non-aggregates");
-        }
-    }
-
-    XmlExprPtr HoistJoinExpr(XmlExprPtr expr) {
-        assert(!(expr->flags & XmlExpr::SubtreeContainsInputPathRef));
-        assert(expr->flags & XmlExpr::SubtreeContainsJoinPathRef);
-        
-        // Synthesize a join query column
-        int columnNum = (int)m_joinSpec.columns.size() + 1;
-        std::string columnName = std::string("__joincolumn_") + XmlUtils::ToString(columnNum);
-        XmlColumnPtr column(new XmlColumn(columnName, expr, XmlColumn::Output | XmlColumn::JoinedColumn));
-        m_joinSpec.columns.push_back(column);
-
-        // The hoisted expression now lives under a column owned by JoinSpec, which will
-        // later be used to specify a query in a different instace of XmlQuerySpec. 
-        // Now produce a column ref to that column, used by the caller to replace the
-        // passed-in expression.
-        XmlOperatorPtr op = XmlOperatorFactory::GetInstance(Opcode::OpColumnRef);
-        XmlExprPtr newExpr(new XmlExpr);
-        newExpr->SetOperator(op);
-        newExpr->SetType(expr->GetType());
-        newExpr->SetColumnRef(column);
-        return newExpr;
-    }
-
-    void DumpExpr(XmlExprPtr expr, int depth = 0)
-    {
-        std::string indent(depth * 2, ' ');
-        switch (expr->GetOperator()->opcode) {
-            case Opcode::OpColumnRef:
-                std::cout << indent << "[" << expr->GetColumnRef()->name << "]";
-                break;
-
-            case Opcode::OpPathRef:
-                std::cout << indent << "{" << expr->GetPathRef()->path;
-                std::cout << "}";
-                break;
-
-            case Opcode::OpLiteral:
-                std::cout << indent << expr->GetValue().ToString(XmlValue::QuoteStrings | XmlValue::SubsecondTimes);
-                break;
-
-            default:
-                std::cout << indent << expr->GetOperator()->name;
-                break;
-        }
-        std::cout << ":" << GetName(expr->GetType());
-        std::cout << std::endl;
-        for (size_t i = 0; i < expr->GetNumArgs(); i++) {
-            DumpExpr(expr->GetArg(i), depth + 1);
-        }
     }
 
     void ParseExpr(XmlExprPtr expr, XmlExprPtr parent = nullptr, bool unary = false)
@@ -911,6 +524,371 @@ private:
         } while (!unary && infix);
     }
 
+    void ProcessExprs(XmlColumnPtr column, XmlExprPtr expr, int depth = 0, bool noDataParent = false)
+    {
+        XmlOperatorPtr op = expr->GetOperator();
+        assert(op);
+
+        if (op->flags & XmlOperator::TopLevelOnly && depth > 0) {
+            XmlUtils::Error("Top-level expression only: %s", op->name);
+        }
+
+        if (op->flags & XmlOperator::OnceOnly) {
+            for (auto& expr : m_exprs) {
+                if (expr->GetOperator()->opcode == op->opcode) {
+                    XmlUtils::Error("Expression can only be used once: %s", op->name);
+                }
+            }
+        }
+
+        m_exprs.push_back(expr);
+        
+        if (op->flags & XmlOperator::Aggregate) {
+            column->flags |= XmlColumn::Aggregate;
+            expr->flags |= XmlExpr::SubtreeContainsAggregate;
+            m_flags |= AggregatesExist;
+            XmlAggregateOperator* aggrOp = dynamic_cast<XmlAggregateOperator*>(op.get());
+            aggrOp->aggrIdx = m_aggrCount++;
+        }
+
+        if (op->flags & XmlOperator::GatherData) {
+            m_flags |= GatherDataPassRequired;
+        }
+
+        size_t numArgs = expr->GetNumArgs();
+        switch (op->opcode) {
+            case Opcode::OpPathRef: {
+                XmlPathRefPtr pathRef = expr->GetPathRef();
+                expr->flags |= (pathRef->flags & XmlPathRef::Joined)
+                    ? XmlExpr::SubtreeContainsJoinPathRef
+                    : XmlExpr::SubtreeContainsInputPathRef;
+                pathRef->flags |= noDataParent ? XmlPathRef::NoData : XmlPathRef::Data;
+                break;
+            }
+
+            case Opcode::OpCase:
+                if ((numArgs == 0 || expr->GetArg(0)->GetValue().bval)) {
+                    XmlUtils::CaseSensitivityMode(true, true);
+                }
+                break;
+
+            case Opcode::OpAttr:
+                m_flags |= AttributesUsed;
+                break;
+
+            case Opcode::OpLineNum:
+                m_flags |= LineNumUsed;
+                break;
+
+            case Opcode::OpDistinct:
+                m_flags |= DistinctUsed;
+                break;
+
+            case Opcode::OpFirst:
+                m_firstNRows = (size_t)std::max((__int64_t)0, expr->GetArg(0)->GetValue().ival);
+                m_flags |= FirstNRowsSpecified;
+                break;
+
+            case Opcode::OpTop:
+                m_topNRows = (size_t)std::max((__int64_t)0, expr->GetArg(0)->GetValue().ival);
+                m_flags |= TopNRowsSpecified;
+                break;
+
+            case XmlOperator::OpPivot:
+                m_pivotColumn = column;
+                m_flags |= HasPivot;
+                break;
+
+            case XmlOperator::OpSort:
+                m_sortColumn = column;
+                for (size_t i = 0; i < numArgs; i++) {
+                    XmlExprPtr arg = expr->GetArg(i);
+                    m_reversedStringSorts.push_back(
+                        (arg->GetType() == XmlType::Unknown || arg->GetType() == XmlType::String) && 
+                        arg->GetOperator()->opcode == XmlOperator::OpNeg
+                    );
+                }
+                break;
+
+            case Opcode::OpInputHeader:
+                // if header is specified, the default is true, otherwise false
+                m_inputSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
+                break;
+
+            case Opcode::OpJoinHeader:
+                // if header is specified, the default is true, otherwise false
+                m_joinSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
+                break;
+
+            case Opcode::OpOutputHeader:
+                // if header is specified, the default is true, otherwise false
+                m_outputSpec.header = (numArgs == 0 || expr->GetArg(0)->GetValue().bval);
+                break;
+
+            case Opcode::OpHelp:
+                m_flags |= ShowUsage;
+                break;
+
+            case Opcode::OpIn:
+                m_inputSpec.filename = expr->GetArg(0)->GetValue().sval;
+                break;
+
+            case Opcode::OpJoin:
+                m_joinSpec.filename = expr->GetArg(0)->GetValue().sval;
+                if (numArgs == 2) {
+                    m_joinSpec.outer = expr->GetArg(1)->GetValue().bval;
+                }
+                m_flags |= LeftSideOfJoin;
+                break;
+
+            case Opcode::OpSync:
+                expr->GetArg(0)->GetPathRef()->flags |= XmlPathRef::Sync;
+                break;
+
+            case Opcode::OpRoot:
+                m_rootNodeNum = expr->GetArg(0)->GetValue().ival;
+                break;
+        }
+
+        if (depth == 0) {
+            if (!(op->flags & XmlOperator::Directive)) {
+                column->flags |= XmlColumn::Output;
+            }
+            if (op->opcode == Opcode::OpWhere) {
+                expr->ChangeType(XmlType::Boolean);
+                column->flags |= XmlColumn::Filter;
+            }
+            if (op->opcode != Opcode::OpPivot) {
+                if (m_currentColumnNames.size() > 1) {
+                    XmlUtils::Error("Multiple column names only valid for pivot function");
+                }
+                if (m_currentColumnNames.size() == 1 && m_currentColumnNames[0] == "...") {
+                    XmlUtils::Error("Column name spread (...) only valid for pivot function");
+                }
+            }
+        }
+
+        noDataParent = (op->flags & XmlOperator::NoData) != 0;
+        for (size_t i = 0; i < expr->GetNumArgs(); i++) {
+            ProcessExprs(column, expr->GetArg(i), depth + 1, noDataParent);
+        }
+    };
+    // This is called after all the columns have been parsed, particularly because we resolve 
+    // Column references
+    void ProcessRefs() 
+    {
+        if ((m_inputSpec.pathRefs.size() == 0) &&
+            ((m_flags & LeftSideOfJoin) || m_sortColumn || (m_flags & DistinctUsed))) {
+            XmlUtils::Error("Queries with joins, sorts, or distinct require least one input path reference");
+        }
+        if ((m_joinSpec.pathRefs.size() == 0) && (m_flags & LeftSideOfJoin)) {
+            XmlUtils::Error("A join requires at least one joined path reference");
+        }
+
+        for (auto& expr : m_exprs) {
+            XmlOperatorPtr op = expr->GetOperator();
+            if (op->flags & XmlOperator::ImmedEvaluate) {
+                XmlPathRefPtr pathRef = expr->GetArg(0)->GetPathRef();
+                if (!pathRef) {
+                    XmlUtils::Error("First argument must be a path reference");
+                }
+                if (op->flags & XmlOperator::StartMatchEval) {
+                    pathRef->startMatchExprs.push_back(expr);
+                }
+                else {
+                    pathRef->endMatchExprs.push_back(expr);
+                }
+                if (pathRef->flags & XmlPathRef::Joined) {
+                    m_joinSpec.flags |= NodeStackRequired;
+                }
+                else {
+                    m_flags |= NodeStackRequired;
+                }
+            }
+
+            if (op->opcode == Opcode::OpColumnRef) {
+                // This is a temporary reference created in ParseRef, to be resolved now since 
+                // all the columns have been parsed.
+                const std::string& colName = expr->GetColumnRef()->name;
+                XmlColumnPtr column = GetColumn(colName);
+                assert(column); // we should find it
+                while (column->expr->GetColumnRef()) {
+                    XmlColumnPtr nextColumn = GetColumn(column->expr->GetColumnRef()->name);
+                    assert(nextColumn);
+                    if (nextColumn->name == colName) {
+                        XmlUtils::Error("Circular column reference: %s", colName);
+                    }
+                    column = nextColumn;
+                }
+                expr->SetColumnRef(column); // replace temporary column ref with the real column ref
+            }
+        }
+    }
+
+    void ProcessColumns() {
+        for (auto& column : m_columns) {
+            XmlExprPtr expr = column->expr;
+            ProcessColumnStructure(expr);
+            if (expr->flags & XmlExpr::SubtreeContainsJoinPathRef) {
+                column->expr = HoistJoinExpr(expr);
+            }
+        }
+    }
+
+    void ProcessColumnStructure(XmlExprPtr expr) 
+    {
+        XmlOperatorPtr op = expr->GetOperator();
+        assert(op);
+
+        if (expr->flags & XmlExpr::Visited) {
+            // Column references makes the expression traversal DAG-like.
+            return;
+        }
+        expr->flags |= XmlExpr::Visited;
+
+        // Traverse children expressions, looking for the largest subexpressions that
+        // are functions of join ref paths, not not main input ref paths, and hoist
+        // them a join column.
+        auto RollupFlags = [](XmlExprPtr parent, XmlExprPtr child) {
+            if (child->flags & XmlExpr::SubtreeContainsAggregate) {
+                if (parent->GetOperator()->flags & XmlOperator::Aggregate) {
+                    XmlUtils::Error("Aggregate functions cannot be composed");
+                }
+                parent->flags |= XmlExpr::SubtreeContainsAggregate;
+            }
+            if (child->flags & XmlExpr::SubtreeContainsInputPathRef) {
+                parent->flags |= XmlExpr::SubtreeContainsInputPathRef;
+            }
+            if (child->flags & XmlExpr::SubtreeContainsJoinPathRef) {
+                // If the child is both a function of input path refs and join path refs
+                // then we failed to hoist out join path-dependent expressions.
+                assert(!(child->flags & XmlExpr::SubtreeContainsInputPathRef));
+                parent->flags |= XmlExpr::SubtreeContainsJoinPathRef;
+            }
+        };
+
+        // Traverse descendants  
+        if (op->opcode == Opcode::OpColumnRef) {
+            XmlExprPtr columnExpr = expr->GetColumnRef()->expr;
+            ProcessColumnStructure(columnExpr);
+            RollupFlags(expr, columnExpr);
+        } else {
+            for (size_t i = 0; i < expr->GetNumArgs(); i++) {
+                XmlExprPtr arg = expr->GetArg(i);
+                ProcessColumnStructure(arg); 
+                RollupFlags(expr, arg);
+            }
+        }
+
+        // Joined paths are to be hoisted before computing an aggregation or a function that is also
+        // a function of an input path.  We can accumulate larger subtrees containing multiple
+        // join path references (but no aggregations or input paths) before hoisting.
+        if ((expr->flags & XmlExpr::SubtreeContainsJoinPathRef) && 
+            (expr->flags & XmlExpr::SubtreeContainsInputPathRef || (op->flags & XmlOperator::Aggregate))) {
+            // If an expression argument is a joined path, and involving a joined path and either an a
+            // input path ref or an aggregation, hoist the join paths.
+            for (size_t i = 0; i < expr->GetNumArgs(); i++) {
+                XmlExprPtr arg = expr->GetArg(i);
+                if (arg->flags & XmlExpr::SubtreeContainsJoinPathRef) {
+                    XmlExprPtr newArg = HoistJoinExpr(arg);
+                    assert(!(newArg->flags & XmlExpr::SubtreeContainsJoinPathRef));
+                    expr->SetArg(i, newArg);
+                }
+            }
+            expr->flags &= ~XmlExpr::SubtreeContainsJoinPathRef; // undo rollup of this flag
+        }
+
+        // Aggregations "erase" input path dependendies.
+        if (op->flags & XmlOperator::Aggregate) {
+            expr->flags &= ~XmlExpr::SubtreeContainsInputPathRef;
+        }
+
+        // Catch the case where we are trying to make a function of an input/join path and a aggregate
+        // expression. e.g. foo+sum[bar].  This isn't supported. (Note literals are fine, like 1+sum[bar]).
+        // Sort is exempted from this restriction, because we explicitly handle it in the query in order to
+        // have arguments that are mixtures of aggregates and non-aggregates.
+        if (op->opcode != XmlOperator::OpSort && 
+            (expr->flags & XmlExpr::SubtreeContainsAggregate && expr->flags & XmlExpr::SubtreeContainsPathRef)) {
+            XmlUtils::Error("Columns can't be functions of both aggregates and non-aggregates");
+        }
+    }
+
+    XmlExprPtr HoistJoinExpr(XmlExprPtr expr) {
+        assert(!(expr->flags & XmlExpr::SubtreeContainsInputPathRef));
+        assert(expr->flags & XmlExpr::SubtreeContainsJoinPathRef);
+        
+        // Synthesize a join query column
+        int columnNum = (int)m_joinSpec.columns.size() + 1;
+        std::string columnName = std::string("__joincolumn_") + XmlUtils::ToString(columnNum);
+        XmlColumnPtr column(new XmlColumn(columnName, expr, XmlColumn::Output | XmlColumn::JoinedColumn));
+        m_joinSpec.columns.push_back(column);
+
+        // The hoisted expression now lives under a column owned by JoinSpec, which will
+        // later be used to specify a query in a different instace of XmlQuerySpec. 
+        // Now produce a column ref to that column, used by the caller to replace the
+        // passed-in expression.
+        XmlOperatorPtr op = XmlOperatorFactory::GetInstance(Opcode::OpColumnRef);
+        XmlExprPtr newExpr(new XmlExpr);
+        newExpr->SetOperator(op);
+        newExpr->SetType(expr->GetType());
+        newExpr->SetColumnRef(column);
+        return newExpr;
+    }
+
+    void GatherJoinEqualities() {
+        for (auto& expr : m_exprs) {
+            if (expr->GetOperator()->opcode == Opcode::OpWhere) {
+                // collect all unique joined path refs that appear on one side of a where[LHS==RHS]. 
+                // We will use this information to index the join rows for efficiency.
+                // In addition, collect the expressions on the other side side of the equality, 
+                // since we'll be using those to compute the index key from each of the input rows.
+                // To make the code more readable, these are in separate vectors rather than in a pair.
+                for (size_t eqOperand = 0; eqOperand <= 1; eqOperand++) {
+                    XmlExprPtr pred = expr->GetArg(0);
+                    if (pred->GetOperator()->opcode == Opcode::OpEQ) {
+                        XmlExprPtr arg = pred->GetArg(eqOperand);
+                        // TODO: error if both operands are right-dependent?
+                        XmlColumnPtr column = arg->GetColumnRef();
+                        if (column && (column->flags & XmlColumn::JoinedColumn)) {
+                            column->flags |= XmlColumn::Indexed;
+                            m_joinSpec.equalityExprs.push_back(pred->GetArg(1 - eqOperand)); // record other operand
+                            expr->flags |= XmlExpr::JoinEqualityWhere;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void DumpExpr(XmlExprPtr expr, int depth = 0)
+    {
+        std::string indent(depth * 2, ' ');
+        switch (expr->GetOperator()->opcode) {
+            case Opcode::OpColumnRef:
+                std::cout << indent << "[" << expr->GetColumnRef()->name << "]";
+                break;
+
+            case Opcode::OpPathRef:
+                std::cout << indent << "{" << expr->GetPathRef()->path;
+                std::cout << "}";
+                break;
+
+            case Opcode::OpLiteral:
+                std::cout << indent << expr->GetValue().ToString(XmlValue::QuoteStrings | XmlValue::SubsecondTimes);
+                break;
+
+            default:
+                std::cout << indent << expr->GetOperator()->name;
+                break;
+        }
+        std::cout << ":" << GetName(expr->GetType());
+        std::cout << std::endl;
+        for (size_t i = 0; i < expr->GetNumArgs(); i++) {
+            DumpExpr(expr->GetArg(i), depth + 1);
+        }
+    }
+
     Token Lookahead(int lookahead = 0)
     {
         return m_tokens->Lookahead(lookahead);
@@ -954,10 +932,7 @@ private:
         std::string str;
         while(true) {
             TokenId id = Lookahead(0).id;
-            if (id == TokenId::End || id == endToken) {
-                break;
-            }
-            if (alternative != TokenId::None && id == alternative) {
+            if (id == TokenId::End || id == endToken || (alternative != TokenId::None && id == alternative)) {
                 break;
             }
             str += GetNext().str; // even error tokens
@@ -1250,9 +1225,8 @@ private:
     InputSpec m_inputSpec;
     OutputSpec m_outputSpec;
     JoinSpec m_joinSpec;
-    XmlColumnPtr m_currentColumn;
-    std::vector<std::string> m_currentColumnNames;
-    std::vector<std::string> m_allColumnNames;
+    std::vector<std::string> m_currentColumnNames; // used during reference parsing
+    std::vector<std::string> m_allColumnNames; // ditoo
     XmlQueryTokenizerPtr m_tokens;
     XmlColumns m_columns;
     std::unordered_map<std::string, XmlColumnPtr> m_colMap;
