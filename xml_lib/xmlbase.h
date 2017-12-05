@@ -1045,7 +1045,7 @@ struct IColumnEditor
 {
     virtual const XmlColumns& GetColumns() const = 0;
     virtual XmlColumnPtr GetColumn(const std::string& colName) const = 0;
-    virtual size_t InsertColumn(XmlColumnPtr column, size_t idx = npos) = 0;
+    virtual void InsertColumn(XmlColumnPtr column, size_t idx = npos) = 0;
     virtual void DeleteColumn(XmlColumnPtr column) = 0;
 };
 
@@ -1185,6 +1185,7 @@ struct XmlParserContext
         numRowsOutput = 0;
         numRowsMatched = 0;
         relativeDepth = 0;
+        currDepth = 0;
         nodeStack.clear();
         attrCountStack.clear();
         attrStack.clear();
@@ -1213,6 +1214,7 @@ struct XmlParserContext
     size_t numRowsMatched; // before filtering
     size_t numRowsOutput; // after filtering
     int relativeDepth;
+    int currDepth;
     std::vector<XmlNodeInfo> nodeStack;
     std::vector<int> attrCountStack;
     std::vector<std::pair<std::string, std::string>> attrStack;

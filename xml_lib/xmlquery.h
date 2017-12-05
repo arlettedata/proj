@@ -55,7 +55,7 @@ public:
         : m_flags(0)
         , m_context(context)
         , m_querySpec(querySpec)
-        , m_pivoter((IColumnEditor*)querySpec.get())
+        , m_pivoter(context, (IColumnEditor*)querySpec.get())
     {
     }
 
@@ -101,6 +101,8 @@ public:
                 XmlRowHash(numValueCols), XmlRowEquals(numValueCols)));
         }
 
+        SetFlags(ParseStopped, false);
+
         if (passType == XmlPassType::MainPass) {
             SetFlags(StoreRows, !Streaming());
         }
@@ -110,7 +112,7 @@ public:
 
         SetFlags(InvokeRowCallback, (passType == lastPassType));
         
-        m_pivoter.Reset(passType); 
+        m_pivoter.Reset(); 
         if (passType == XmlPassType::MainPass) {
             m_seqRows.clear();
             m_rowRefs.clear();
@@ -155,9 +157,9 @@ public:
         return 1;
     }
 
-    void OnEndTag(int currDepth) 
+    void OnEndTag() 
     {
-        if (m_pivoter.EndPartition(currDepth)) {
+        if (m_pivoter.OnEndTag()) {
             EmitPivotedRows();
         }
     }
@@ -167,7 +169,7 @@ public:
         if (m_pivoter.Enabled()) {
             XmlRow& row = AllocRow(m_pivoter.GetPartitionSize());
             XmlExprEvaluator evaluator(m_context);
-            m_pivoter.UpdatePartition(row, evaluator);
+            m_pivoter.OnRow(row, evaluator);
         }
         else if (!CommitRow(AllocRow())) {
             SetFlags(RecycleStorage, true);

@@ -1,0 +1,21 @@
+{
+    "outer": "xxx"
+}
+{
+    "foo": "bar1",
+    "colors": {
+        "R": "red",
+        "B": "black",
+        "W": "white",
+        "S": "silver"
+    }
+}
+{
+    "foo": "bar2",
+    "colors": {
+        "Y": "yellow",
+        "C": "charcoal",
+        "S": "smoke",
+        "P": "plum"
+    }
+}

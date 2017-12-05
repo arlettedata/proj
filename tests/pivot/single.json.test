@@ -1,0 +1,1 @@
+--in=single.json foo ...:pivot[nodename[map.*],map.*]

@@ -1,0 +1,17 @@
+code,desc
+DM,Demographics
+SV,Subject Visit
+AE,Adverse Event
+DS,Disposition
+MH,Medical History
+CM,Concomitant Med
+EX,Exposure (Study Drug)
+PR,Procedures
+PE,Physical Exam
+LB,Laboratory
+VS,Vital Signs
+QS,Questionnaires 
+EG,ECG
+CF,Clinical Finding 
+DC,Drug Concentration
+CO,Comments

@@ -42,30 +42,32 @@ class XmlPivoter
             , pivotedRow(nullptr)
         {
         }
-        std::vector<XmlColumnPtr> newColumns;
-        std::vector<size_t> insertionIndices;
-        XmlRow* pivotedRow;
         XmlRows& rows;
+        XmlRow* pivotedRow;
+        std::vector<XmlColumnPtr> newColumns;
     };
 
 public:
-    XmlPivoter(IColumnEditor* columnEditor)
-        : m_columnEditor(columnEditor)
+    XmlPivoter(XmlParserContextPtr context, IColumnEditor* columnEditor)
+        : m_context(context)
+        , m_columnEditor(columnEditor)
+        , m_firstPass(true)
         , m_collectingColumns(true)
-        , m_nameValuesDepth(0)
+        , m_trainingPartitionDepth(true)
+        , m_partitionDepth(0)
         , m_state(StartNewPartition)
         , m_jagged(false)
         , m_spreadIdx(-1)
     {
     }
 
-    void BindColumns(XmlColumnPtr column, const std::vector<std::string>& columnNames)
+    void BindColumns(XmlColumnPtr pivotColumn, const std::vector<std::string>& columnNames)
     {
         if (columnNames.size() == 0) {
             XmlUtils::Error("Pivot function requires column names, which can include spread (...)");
         }
 
-        XmlExprPtr expr = column->expr;
+        XmlExprPtr expr = pivotColumn->expr;
         if (expr->GetArg(0)->flags & XmlExpr::SubtreeContainsAggregate) {
             XmlUtils::Error("Pivot names argument must not contain aggregate functions");
         }
@@ -74,20 +76,22 @@ public:
         }
         
         m_spreadIdx = -1;
+
+        size_t nextColumnIdx = pivotColumn->index;
         for (size_t i = 0; i < columnNames.size(); i++) {
             const std::string& colName = columnNames[i];
             if (colName == "...") {
                 assert(m_spreadIdx == -1); // shouldn't be able to get here with two ... (duplicate column name error)
-                m_spreadIdx = m_columnEditor->GetColumns().size();
+                m_spreadIdx = nextColumnIdx;
             }
             else {
-                InsertNewColumn(colName);
+                XmlColumnPtr column = InsertNewColumn(colName, nextColumnIdx);
+                nextColumnIdx = column->index + 1;
             }
         }
-        m_column = column;
+        m_column = pivotColumn;
         m_columnNames = columnNames;
-        m_jagged = expr->GetNumArgs() == 3 && expr->GetArg(2)->GetType() == XmlType::Boolean && 
-            expr->GetArg(2)->GetValue().bval;
+        m_jagged = expr->GetNumArgs() == 3 && expr->GetArg(2)->GetType() == XmlType::Boolean && expr->GetArg(2)->GetValue().bval;
     }
 
     bool Enabled() const
@@ -100,48 +104,50 @@ public:
         return Enabled() && m_jagged;
     }
 
-    void Reset(XmlPassType endOfPassType)
+    void Reset()
     {
-        if (!Enabled()) {
-            return;
-        }
-        m_nameValuesDepth = 0;
-        m_state = StartNewPartition;
-        if (endOfPassType == XmlPassType::GatherDataPass) {
-            m_collectingColumns = false;
-        }
-    }
-
-    void UpdatePartition(XmlRow& row, XmlExprEvaluator& evaluator)
-    {
-        if (!Enabled()) {
-            return;
-        }
-
-        if (m_state == StartNewPartition) {
-            // Walk the expression tree used to evaluate the names column. The least depth tells us
-            // the "scope" of the name. We assume all other names exist at the same scope.
-            // <scope><name>theName</name><value>theValue</value></scope> // distance from theName/theValue to outside
-            // of scope is 3
-            m_nameValuesDepth = GetLeastMatchDepth(GetNamesExpr()) - 3;
-        }
-
-        m_state = Partitioning;
-        m_names.push_back(std::move(evaluator.Evaluate(GetNamesExpr()).sval));
-        m_values.push_back(std::move(evaluator.Evaluate(GetValuesExpr()).sval));
-    }
-
-    bool EndPartition(int currDepth)
-    {
-        if (!Enabled()) {
-            return false;
-        }
-        if (m_state != Partitioning) {
-            return false;
-        }
-        if (currDepth < m_nameValuesDepth) {
+        if (Enabled()) {
             m_state = StartNewPartition;
-            return true;
+            m_collectingColumns = m_firstPass;
+            m_firstPass = false;
+        }
+    }
+
+    void OnRow(XmlRow& row, XmlExprEvaluator& evaluator)
+    {
+        if (Enabled()) {
+            if (m_state == StartNewPartition) {
+                assert(GetPartitionSize() == 0);
+                if (m_trainingPartitionDepth) {
+                    assert(m_context->currDepth >= 0);
+                    m_partitionDepth = m_context->currDepth;
+                }
+            }
+
+            m_state = Partitioning;
+            m_names.push_back(std::move(evaluator.Evaluate(GetNamesExpr()).sval));
+            m_values.push_back(std::move(evaluator.Evaluate(GetValuesExpr())));
+        }
+    }
+
+    bool OnEndTag()
+    {
+        int currDepth = m_context->currDepth;
+        if (Enabled() && m_state == Partitioning) {
+            // Unless we reached the root of the input, train the depth between the first and second row.
+            // (We let the depth "dip" so we can infer the depth of the group that encapsulates the rows.)
+            if (GetPartitionSize() >= 2 || currDepth == 0) {
+                m_trainingPartitionDepth = false;
+            }
+            if (m_trainingPartitionDepth) {
+                m_partitionDepth = std::min(currDepth, m_partitionDepth); 
+                return false;
+            }
+            if (currDepth < m_partitionDepth) {
+                // We're leaving the min depth of the partition's name/values, so mark off a new partition
+                m_state = StartNewPartition;
+                return true;
+            }
         }
         return false;
     }
@@ -159,7 +165,7 @@ public:
 
         // Clear previous values on existing pivot columns
         std::string emptyString;
-        for (auto& column : m_columnEditor->GetColumns() ) {
+        for (auto& column : m_columnEditor->GetColumns()) {
             if (column->IsPivotResult()) {
                 column->expr->SetValue(emptyString);
             }
@@ -172,14 +178,13 @@ public:
         bool colsAdded = false;
         for (size_t idx = 0; idx < partitionSize; idx++) {
             size_t rowIdx = firstRowIdx + idx;
-            XmlRow& row = rows[rowIdx];
             const std::string& colName = m_names[idx];
-            const std::string& colValue = m_values[idx];
+            const XmlValue& colValue = m_values[idx];
             XmlColumnPtr column = m_columnEditor->GetColumn(colName);
             if (!column && m_collectingColumns && m_spreadIdx != -1) {
                 column = InsertNewColumn(colName, m_spreadIdx);
+                assert(m_columnEditor->GetColumn(colName) == column);
                 context.newColumns.push_back(column);
-                context.insertionIndices.push_back(m_spreadIdx);
                 m_spreadIdx++;
                 colsAdded = true;
             }
@@ -196,9 +201,9 @@ public:
         XmlRow& row = context.rows.back();
         context.pivotedRow = &row;
 
-        // Add the space for the current row so we can process it (in particular evaluate its columns)
-        for (auto it = context.insertionIndices.begin(); it != context.insertionIndices.end(); it++) {
-            row.insert(row.begin() + *it, XmlValue());
+        // Add the space for the current row so we can evaluate its columns
+        for (auto& column : context.newColumns) {
+            row.insert(row.begin() + column->valueIdx, XmlValue());
         }
 
         // Reset partition
@@ -211,13 +216,6 @@ public:
     void CommitPivot(Context& context)
     {
         assert(Enabled());
-
-        // insert gaps in the earlier rows and leave as null
-        for (auto& row : context.rows) {
-            for (auto idx : context.insertionIndices ) {
-                row.insert(row.begin() + idx, XmlValue());
-            }
-        }
         if (!m_jagged) {
             m_collectingColumns = false;
         }
@@ -235,20 +233,21 @@ public:
                 m_spreadIdx--;
             }
         }
-        // signal caller to call RemoveRecycledRow if the pivoted row contains the
-        // new columns, which are not obsolete
-        return true;//context.newColumns.size() > 0; 
+        // signal caller to call RemoveRecycledRow 
+        return true;
     }
 
     void CheckUnreferenced() const
     {
-        if (!Enabled()) {
-            return;
-        }
+        int cnt = 0;
+        std::string colNames;
         for (auto& column : m_columnEditor->GetColumns()) {
             if (column->IsPivotResult() && (m_referencedColumns.find(column) == m_referencedColumns.end())) {
-                XmlUtils::Error("Pivot column not found in input: %s", column->name);
+                colNames += std::string((cnt++ ? ", " : "")) + column->name;
             }
+        }
+        if (cnt) {
+            /**/XmlUtils::Error("Pivot column%s not found in input: %s", cnt ? "s" : "", colNames);
         }
     }
 
@@ -260,26 +259,6 @@ private:
         XmlColumnPtr column(new XmlColumn(colName, expr, XmlColumn::Output | XmlColumn::PivotResult));
         m_columnEditor->InsertColumn(column, idx);
         return column;
-    }
-
-    int GetLeastMatchDepth(XmlExprPtr expr) const // called after we made a match
-    {
-        int matchDepth = INT_MAX - 1; // don't want childDepth++ to overflow
-        auto pathRef = expr->GetPathRef();
-        if (pathRef) {
-            matchDepth = pathRef->path->GetMatchDepth();
-        }
-        size_t numArgs = expr->GetNumArgs();
-        for (size_t i = 0; i < numArgs; i++) {
-            int childDepth = GetLeastMatchDepth(expr->GetArg(i));
-            if (expr->GetOperator()->opcode == XmlOperator::OpAttr) {
-                childDepth++; // treat <tag attr=x></tag> as if it were <tag><attr>x</attr></tag>
-            }
-            if (childDepth < matchDepth) {
-                matchDepth = childDepth;
-            }
-        }
-        return matchDepth;
     }
 
     XmlColumnPtr GetColumn() const
@@ -304,11 +283,14 @@ private:
     size_t m_spreadIdx;
     XmlColumnPtr m_column; // the column containing Pivot(), not any of its produced columns
     std::vector<std::string> m_columnNames;
+    XmlParserContextPtr m_context;
     IColumnEditor* m_columnEditor;
     std::vector<std::string> m_names; // for the current partition
-    std::vector<std::string> m_values; // for the current partition
+    std::vector<XmlValue> m_values; // for the current partition
     States m_state;
-    int m_nameValuesDepth;
+    bool m_trainingPartitionDepth;
+    int m_partitionDepth;
+    bool m_firstPass;
     bool m_collectingColumns;
     std::unordered_set<XmlColumnPtr> m_referencedColumns;
 };

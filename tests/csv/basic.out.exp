@@ -1,15 +1,17 @@
-<row>
-  <size>S</size>
-  <color>red</color>
-  <price>1.99</price>
-</row>
-<row>
-  <size>M</size>
-  <color>green</color>
-  <price>2.50</price>
-</row>
-<row>
-  <size>L</size>
-  <color>blue</color>
-  <price>4.95</price>
-</row>
+<table>
+  <row>
+    <size>S</size>
+    <color>red</color>
+    <price>1.99</price>
+  </row>
+  <row>
+    <size>M</size>
+    <color>green</color>
+    <price>2.50</price>
+  </row>
+  <row>
+    <size>L</size>
+    <color>blue</color>
+    <price>4.95</price>
+  </row>
+</table>

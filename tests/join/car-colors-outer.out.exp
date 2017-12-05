@@ -1,11 +1,8 @@
 make,type,car-color
 Ford,sedan,black
 Volvo,sedan,red
-outer join on Value(X:String) 
 Ford,sedan,
-outer join on Value(C:String) 
 Volvo,sedan,
 BMW,sedan,white
 Cadillac,SUV,silver
-outer join on Value(T:String) 
 Ford,SUV,

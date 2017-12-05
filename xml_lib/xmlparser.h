@@ -127,7 +127,6 @@ public:
         , m_querySpec(new XmlQuerySpec)
         , m_context(new XmlParserContext)
         , m_totalBufferSize(DefaultBufferSize)
-        , m_currDepth(0)
         , m_echoOutput(std::cout)
     {
         m_query.reset(new XmlQuery(m_context, m_querySpec));
@@ -317,7 +316,7 @@ public:
                         continue;
                     }
 
-                    m_currDepth++;
+                    m_context->currDepth++;
 
                     if (m_querySpec->IsFlagSet(XmlQuerySpec::NodeStackRequired)) {
                         m_context->nodeStack.push_back(XmlNodeInfo(tag, len, m_context->numNodes));
@@ -351,12 +350,12 @@ public:
                         continue;
                     }
 
-                    if (--m_currDepth == 0 && rootNodeNum) {
+                    if (--m_context->currDepth == 0 && rootNodeNum) {
                         SetFlags(FoundRootNode, false);
                         m_query->SetFlags(XmlQuery::ParseStopped, true);
                     }
 
-                    m_query->OnEndTag(m_currDepth);
+                    m_query->OnEndTag();
 
                     m_context->appendingValues = false;
 
@@ -715,7 +714,6 @@ private:
     std::streamsize m_totalBufferSize;
     std::streamsize m_unusedBufferSize;
     std::streamsize m_usedBufferSize;
-    int m_currDepth;
 
     // Output
     std::ostream& m_echoOutput;

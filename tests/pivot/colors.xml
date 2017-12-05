@@ -1,0 +1,45 @@
+<outer>xxx</outer>
+<group>
+  <row>
+    <foo>bar1</foo>
+    <name>R</name>
+    <value>red</value>
+  </row>
+  <row>
+    <foo>bar2</foo>
+    <name>B</name>
+    <value>black</value>
+  </row>
+  <row>
+    <foo>bar3</foo>
+    <name>W</name>
+    <value>white</value>
+  </row>
+  <row>
+    <foo>bar4</foo>
+    <name>S</name>
+    <value>silver</value>
+  </row>
+</group>
+<group>
+  <row>
+    <foo>bar5</foo>
+    <name>F</name>
+    <value>fuscia</value>
+  </row>
+  <row>
+    <foo>bar6</foo>
+    <name>C</name>
+    <value>charcoal</value>
+  </row>
+  <row>
+    <foo>bar7</foo>
+    <name>S</name>
+    <value>smoke</value>
+  </row>
+  <row>
+    <foo>bar8</foo>
+    <name>P</name>
+    <value>plum</value>
+  </row>
+</group>

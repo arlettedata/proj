@@ -183,6 +183,9 @@ private:
     {
         auto passes = m_parser->GetPassTypes();
         for (auto& passType : passes) {
+            if (ControlCIssued()) {
+                break;
+            }
             m_parser->Reset(passType);
             switch (passType) {
                 case XmlPassType::PassNotSet:
@@ -428,6 +431,7 @@ private:
             firstLine.clear();
         }
 
+        xml->PushTag("table");
         std::string line;
         std::vector<std::string> values;
         while (true) {
@@ -490,7 +494,8 @@ private:
             strm.str(std::string()); // reset
             strm.clear();
         }
-
+        xml->PopTag();
+        m_parser->Parse(strm);
         return true;
     }
 
@@ -586,7 +591,7 @@ private:
         }
         else {
             if (disallowStdin) {
-                XmlUtils::Error("Given query requires two passes, so stdin cannot be used as an input.");
+                /**/XmlUtils::Error("Given query requires two passes, so stdin cannot be used as an input.");
             }
             m_input.reset(&std::cin);
         }

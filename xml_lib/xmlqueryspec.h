@@ -147,7 +147,7 @@ public:
         return m_numValueColumns;
     }
 
-    size_t InsertColumn(XmlColumnPtr column, size_t idx = npos)
+    void InsertColumn(XmlColumnPtr column, size_t idx = npos)
     {
         // get insertion point
         if (idx == npos) {
@@ -166,8 +166,7 @@ public:
         m_colMap.insert(std::make_pair(XmlUtils::ToLower(colName), column));
         assert(m_colMap.size() == m_columns.size());
 
-        UpdateColumnIndices();
-        return idx;
+        UpdateValueIndices();
     }
 
     void DeleteColumn(XmlColumnPtr column) // used by pivot
@@ -186,7 +185,7 @@ public:
         assert(it != m_colMap.end());
         m_colMap.erase(it);
 
-        UpdateColumnIndices();
+        UpdateValueIndices();
     }
 
     size_t GetAggrCount() const
@@ -250,7 +249,7 @@ public:
                 m_allColumnNames.push_back(explicitNames ? name : emptyName); 
             }
             namesPerColumn.push_back(explicitNames ? names : emptyNames);
-            overridesPerColumn.push_back(HandleColumnNameOverrides(namesPerColumn.back()));
+            overridesPerColumn.push_back(std::move(HandleColumnNameSpecialCases(namesPerColumn.back())));
         }
 
         // Second pass to parse the column expressions and add the columns. We also make changes
@@ -265,22 +264,16 @@ public:
             if(!columnOverride.first.empty()) {
                 column->name = columnOverride.first;
             }
-            if(columnOverride.second == Opcode::OpPivot) {
-                assert(m_pivotColumn);
-                pivotColumnNames = m_currentColumnNames; // copy
-            }
             InsertColumn(column);
+            if(columnOverride.second == Opcode::OpPivot) {
+                assert(m_pivotColumn == column);
+                pivoter.BindColumns(m_pivotColumn, m_currentColumnNames);
+            }
             m_currentColumnNames.clear();
             idx++;
         }
 
         ProcessRefs();
-
-        if (m_pivotColumn) {
-            assert(pivotColumnNames.size() > 0);
-            pivoter.BindColumns(m_pivotColumn, pivotColumnNames);
-        }
-        
         ProcessColumns();
         GatherJoinEqualities();
         
@@ -312,7 +305,7 @@ public:
     }
 
 private:
-    void UpdateColumnIndices()
+    size_t UpdateValueIndices()
     {
         m_numValueColumns = 0;
         size_t idx = 0;
@@ -327,6 +320,7 @@ private:
                 column->valueIdx = -1;
             }
         }
+        return valueIdx;
     }
 
     std::vector<std::string> ParseColumnNames(const std::string& columnSpec, bool& explicitNames)
@@ -650,6 +644,8 @@ private:
         if (depth == 0) {
             if (!(op->flags & XmlOperator::Directive)) {
                 column->flags |= XmlColumn::Output;
+                // Note: if the flags contains XmlColumn::PivotResult,
+                // we'll turn this flag back off if we find an expression referencing it.
             }
             if (op->opcode == Opcode::OpWhere) {
                 expr->ChangeType(XmlType::Boolean);
@@ -659,7 +655,8 @@ private:
                 if (m_currentColumnNames.size() > 1) {
                     XmlUtils::Error("Multiple column names only valid for pivot function");
                 }
-                if (m_currentColumnNames.size() == 1 && m_currentColumnNames[0] == "...") {
+                if (m_currentColumnNames.size() > 0 && 
+                    std::find(m_currentColumnNames.begin(), m_currentColumnNames.end(), "...") != m_currentColumnNames.end()) {
                     XmlUtils::Error("Column name spread (...) only valid for pivot function");
                 }
             }
@@ -709,6 +706,14 @@ private:
                 const std::string& colName = expr->GetColumnRef()->name;
                 XmlColumnPtr column = GetColumn(colName);
                 assert(column); // we should find it
+                if (column->IsPivotResult()) {
+                    // Pivot result columns are output unless there is an expression referencing it
+                    // (Particularly important for aggregations since we don't want them to also be
+                    // non-aggregates, but also conventionally useful to keep the columns tidy: we
+                    // let the user introduce the pivot column name and then use it elsewhere without
+                    // having an extra output column.
+                    column->flags &= ~XmlColumn::Output;
+                }
                 while (column->expr->GetColumnRef()) {
                     XmlColumnPtr nextColumn = GetColumn(column->expr->GetColumnRef()->name);
                     assert(nextColumn);
@@ -1166,13 +1171,13 @@ private:
         }
     }
 
-    std::pair<std::string, Opcode> HandleColumnNameOverrides(const std::vector<std::string>& columnNames) 
+    std::pair<std::string, Opcode> HandleColumnNameSpecialCases(const std::vector<std::string>& columnNames) 
     {
         std::string overrideName;
         Opcode opcode = Opcode::OpNull;
 
         // Peek for possible top-level function name (note: --function= form is not detected for sake of simplicity)
-        bool isFunctionCall = Lookahead(0).id == TokenId::Id || 
+        bool isFunctionCall = Lookahead(0).id == TokenId::Id && 
             (Lookahead(1).id == TokenId::LBracket || Lookahead(1).id == TokenId::LParen);
         if (isFunctionCall) {
             try {
@@ -1198,7 +1203,7 @@ private:
                     break;
             }
         }
-        return std::pair<std::string, Opcode>(overrideName, opcode);
+        return std::move(std::pair<std::string, Opcode>(overrideName, opcode));
     }
 
     bool IsBindableColumnName(const std::string& name)

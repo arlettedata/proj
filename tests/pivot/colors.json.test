@@ -1,0 +1,1 @@
+--in=colors.json outer foo ...:pivot[nodename[colors.*],colors.*]

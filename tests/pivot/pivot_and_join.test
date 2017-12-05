@@ -1,0 +1,1 @@
+--in=odm.xml StudyID,Domain,Sex:pivot[ItemData..ItemOID,ItemData..Value] distinct[] join[odmcodes.csv] where[right::code==Domain] right::desc
