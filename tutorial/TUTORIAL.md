@@ -55,6 +55,8 @@ Explanation:<br> there is no difference whether we use stdin or the `--in` param
 
 `first[5]` is a "directive," i.e. a specification that does not result in its own output CSV column, that tells **proj** to only look at the first 5 rows of the input.  This is similar to `top[n]` which instead applies the cutoff after filtering and sorting has occured. 
 
+The escaping of the space allows a match against the input `Customer Name` field.  An alternative way to express this is to use curly brackets and a string: `{"Customer Name"}`.  Curly bracket representation of paths becomes necessary for dealing with ambiguous characters, such as infix operators that appear in names.  (See Step 11.)
+
 <br>
 
 - - -
@@ -166,8 +168,6 @@ Arthur Prichep,31
 Explanation:<br> `sort[]` takes multiple sort values, in the order of major sort values to minor sort values. Descending sort orders are accomplished through negation. The convention used to string values in desceding order is to first coerce using as a string and then use negation: e.g. sort
 
 `count[]` is an aggregate function.  All non-aggregate columns are considered to be groups.
-
-We do not need the curly brackets around `profit` and `segment`, because those path specifications do not contain any spaces or other special characters.
 
 <br>
 
