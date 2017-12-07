@@ -1,0 +1,5 @@
+label,"""|""",MYSCOPE::a
+foo,|,foo
+foo,|,foo
+bar,|,bar
+bar,|,bar

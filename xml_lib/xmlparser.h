@@ -547,7 +547,7 @@ private:
         if (!sc.tagEnd) { // no end of tag found
             if (sc.pos == m_buffer) {
                 // if we are at the beginning of the m_buffer, then this condition indicates that the m_buffer size is
-                // too small. (This is an extreme edge case.)
+                // too small. (This is an extreme edge case, with no unit test, lest we create a tag that is > 64k in length.)
                 XmlUtils::Error("Either input is not an XML file or an XML tag exceeds %s characters.",
                     XmlUtils::ToString((__int64_t)m_totalBufferSize));
             }
@@ -655,8 +655,7 @@ private:
         }
 
         if (malformed) {
-            XmlUtils::Error("Invalid XML tag: %s", 
-                std::string(sc.tagBeg, (size_t)sc.tagEnd - (size_t)sc.tagBeg));
+            XmlUtils::Error("Invalid XML tag: %s",std::string(sc.tagBeg, (size_t)sc.tagEnd - (size_t)sc.tagBeg));
         }
 
         return true;

@@ -408,7 +408,6 @@ public:
                 case 13:
                     if(sb->sgetc() == 10) {
                         sb->sbumpc();
-                    } else {
                     }
                     return true;
                 case std::streambuf::traits_type::eof():

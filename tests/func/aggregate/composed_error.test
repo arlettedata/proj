@@ -1,0 +1,1 @@
+--in=data.csv sum[10+avg[a]]

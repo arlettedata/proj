@@ -1,0 +1,2 @@
+in[foobar.csv] label "|" myscope:join[joindata.csv] where[myscope::a==label] MYSCOPE::a
+

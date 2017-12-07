@@ -292,11 +292,8 @@ public:
         // We assume ParseColumnSpecs has not been called for this instance of XmlQuerySpec.
         assert(m_exprs.size() == 0); 
         assert(m_inputSpec.pathRefs.size() == 0);
+        assert(joinSpec.columns.size() > 0);
 
-        if (joinSpec.columns.empty()) {
-            XmlUtils::Error("Missing joined path references");
-        }
-        
         // Direcly add the path refs and columns as recorded into a JoinSpec by
         // XmlQuerySpec::ParseColumnSpecs/ProcessRefs, in the main instance of XmlQuerySpec.
         m_inputSpec.pathRefs = joinSpec.pathRefs;
@@ -506,7 +503,7 @@ private:
                         XmlUtils::Error("Unexpected token \"%s\"", tok0.str);
                     }
                     else if (tok0.id == TokenId::Plus && isFirstToken) {
-                        XmlUtils::Error("Positive operator not supported; use abs()");
+                        XmlUtils::Error("Infix positive operator not supported; use abs[]");
                     }
                     else if (IsInfix(tok0.id) && !isFirstToken) {
                         ParseInfixOperator(expr, parent);
@@ -693,9 +690,16 @@ private:
     // Column references
     void PostProcessRefs() 
     {
-        if ((m_inputSpec.pathRefs.size() == 0) &&
-            ((m_flags & LeftSideOfJoin) || m_sortColumn || (m_flags & DistinctUsed))) {
-            XmlUtils::Error("Queries with joins, sorts, or distinct require least one input path reference");
+        if (m_inputSpec.pathRefs.size() == 0) {
+            if (m_flags & LeftSideOfJoin) {
+                XmlUtils::Error("Joins require least one input path reference");
+            }
+            if (m_sortColumn) {
+                XmlUtils::Error("Sorts require least one input path reference");
+            }
+            if (m_flags & DistinctUsed) {
+                XmlUtils::Error("Use of distinct requires least one input path reference");
+            }
         }
         if ((m_joinSpec.pathRefs.size() == 0) && (m_flags & LeftSideOfJoin)) {
             XmlUtils::Error("A join requires at least one joined path reference");
@@ -813,12 +817,6 @@ private:
                 PostProcessColumn(column, arg); 
                 RollupFlags(expr, arg);
             }
-        }
-
-        
-        // Pivots on join paths are not supported
-        if ((op->opcode == XmlOperator::OpPivot) && (expr->flags & XmlExpr::SubtreeContainsJoinPathRef)) {
-            /**/XmlUtils::Error("The pivot operator cannot be invoked using joined paths"); 
         }
 
         if ((expr->flags & XmlExpr::SubtreeContainsJoinPathRef) && 

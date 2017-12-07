@@ -398,8 +398,8 @@ public:
     {
         if (!(m_flags & ExistsInInput)) {
             XmlUtils::Error("Path not matched in %sinput: %s", 
-            (m_pathRef->flags & XmlPathRef::Joined) ? "joined " : "",
-            m_pathRef->pathSpec);
+                (m_pathRef->flags & XmlPathRef::Joined) ? "joined " : "",
+                m_pathRef->pathSpec);
         }
     }
 

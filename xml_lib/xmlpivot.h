@@ -92,6 +92,12 @@ public:
         if (expr->GetArg(1)->flags & XmlExpr::SubtreeContainsAggregate) {
             XmlUtils::Error("Pivot values argument must not contain aggregate functions");
         }
+        if (expr->GetArg(0)->flags & XmlExpr::SubtreeContainsJoinPathRef) {
+            XmlUtils::Error("Pivot names argument must not contain joined paths");
+        }
+        if (expr->GetArg(1)->flags & XmlExpr::SubtreeContainsJoinPathRef) {
+            XmlUtils::Error("Pivot values argument must not contain joined paths");
+        }
         
         m_spreadIdx = -1;
 
@@ -219,7 +225,7 @@ public:
             }
         }
         if (cnt) {
-            /**/XmlUtils::Error("Pivot column%s not found in input: %s", cnt ? "s" : "", colNames);
+            XmlUtils::Error("Pivot column%s not found in input: %s", cnt ? "s" : "", colNames);
         }
     }
 

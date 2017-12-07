@@ -145,11 +145,11 @@ private:
                     ? columnArg.substr(1) 
                     : columnArg.substr(0, columnArg.size() - 1);
                 if (argFile.empty()) {
-                    /**/XmlUtils::Error("Missing argument-inclusion filename after @");
+                    XmlUtils::Error("Missing argument-inclusion filename after @");
                 }
                 std::ifstream input(argFile);
                 if (input.fail()) {
-                    /**/XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile);
+                    XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile);
                 }
                 std::string line;
                 while (XmlUtils::GetLine(input, line)) {
@@ -244,6 +244,9 @@ private:
         if (csvOnly || parseAsLogOrCsv) {
             if (csvOnly || !ParseLog(backBuffer, backLines)) {
                 if (!ParseCsv(backLines)) {
+                    // Getting here would be a pathological case because any file ought to be parsable by CSV.
+                    // Even binary files make it through. 
+                    // So... no unit test for it (yet).
                     XmlUtils::Error("Input not recognized as json, xml, csv/tsv, or log");
                 }
             }
@@ -352,8 +355,7 @@ private:
                     handled = true;
                 }
                 else if (category == "ROOT") {
-                    // to deal with unbalanced START/END (a bug), logs have a safeguard where we expect to be at zero
-                    // depth
+                    // to deal with unbalanced START/END (a bug), logs have a safeguard where we expect to be at zero depth
                     while (openedTags.size()) {
                         openedTags.pop();
                     }
@@ -593,7 +595,7 @@ private:
         }
         else {
             if (disallowStdin) {
-                /**/XmlUtils::Error("Given query requires two passes, so stdin cannot be used as an input.");
+                XmlUtils::Error("Given query requires two passes, so stdin cannot be used as an input.");
             }
             m_input.reset(&std::cin);
         }
