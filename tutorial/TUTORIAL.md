@@ -38,11 +38,11 @@ Row ID,OrderID,Order Date,Ship Date,Ship Mode,Customer ID,Customer Name,Segment,
 ### 3. Look at the first five orders and customer names, using an input file rather than stdin.
 Input:
 ```
-proj --in=orders.csv {"Order Date"} {"Customer Name"} first[5]
+proj --in=orders.csv Order\ Date Customer\ Name first[5]
 ```
 Output:
 ```
-{Order Date},{Customer Name}
+Order Date,Customer Name
 1/4/13,Phillina Ober
 1/4/13,Phillina Ober
 1/4/13,Phillina Ober
@@ -53,10 +53,9 @@ Explanation:<br> there is no difference whether we use stdin or the `--in` param
 
 **proj** does not interpret file name extensions to determine format.  Instead, the tool guesses the input format, in order, from JSON, XML, log files (using typical Log4J formatting), tab-separated (TSV), and comma-separated (CSV). By the time we interpret as CSV, any file qualifies with garbage-in-garbage-out behavior.  Embedded JSON within log files are expanded.
 
-Curly brackets are used to create a path specification with special characters. In this case, the 
-special character is a space, which is otherwise a tokenizing delimiter.  
-
 `first[5]` is a "directive," i.e. a specification that does not result in its own output CSV column, that tells **proj** to only look at the first 5 rows of the input.  This is similar to `top[n]` which instead applies the cutoff after filtering and sorting has occured. 
+
+The escaping of the space allows a match against the input `Customer Name` field.  An alternative way to express this is to use curly brackets and a string: `{"Customer Name"}`.  Curly bracket representation of paths becomes necessary for dealing with ambiguous characters, such as infix operators that appear in names.  (See Step 11.)
 
 <br>
 
@@ -65,7 +64,7 @@ special character is a space, which is otherwise a tokenizing delimiter.
 ### 4. Provide custom header, while relaxing the case.
 Input:
 ```
-cat orders.csv | proj Date:{"order date"} Customer:{"customer name"} first[5]
+cat orders.csv | proj Date:order\ date Customer:customer\ name first[5]
 ```
 Output:
 ```
@@ -87,7 +86,7 @@ Explanation:<br> because we did not specify `--case=true` (equivalently, `case[t
 ### 5. Show and then count the distinct customers.
 Input:
 ```
-proj --in=orders.csv name:{"customer name"} --distinct
+proj --in=orders.csv name:customer\ name --distinct
 ```
 Output:
 ```
@@ -103,7 +102,7 @@ There is currently no support for the "COUNT DISTINCT" functionality that SQL of
 
 Input:
 ```
-proj --in=orders.csv --distinct name:{"Customer Name"} | proj count[name]
+proj --in=orders.csv --distinct name:Customer\ Name | proj count[name]
 ```
 Output:
 ```
@@ -149,7 +148,7 @@ Explanation:<br> argument files, which are filenames prepended or appended with 
 
 ### 7. Query the top 10 customers that made the most orders, sorted first by descending order of number of orders, and then by customer's (first) name.
 ```
-cat orders.csv | proj Customer:{"Customer Name"} Orders:count[OrderID] sort[-Orders,Customer] top[10]
+cat orders.csv | proj Customer:Customer\ Name Orders:count[OrderID] sort[-Orders,Customer] top[10]
 ```
 Output: 
 ```
@@ -169,8 +168,6 @@ Arthur Prichep,31
 Explanation:<br> `sort[]` takes multiple sort values, in the order of major sort values to minor sort values. Descending sort orders are accomplished through negation. The convention used to string values in desceding order is to first coerce using as a string and then use negation: e.g. sort
 
 `count[]` is an aggregate function.  All non-aggregate columns are considered to be groups.
-
-We do not need the curly brackets around `profit` and `segment`, because those path specifications do not contain any spaces or other special characters.
 
 <br>
 
@@ -207,7 +204,7 @@ Explanation:<br> string literals are given by quoted strings (escaped here due t
 ### 9. Filter customer names with only one order, with discussion on compounding aggregations.
 Input:
 ```
-cat orders.csv | proj Name:{customer\ name} where[count[orderid]==1]
+cat orders.csv | proj Name:customer\ name where[count[orderid]==1]
 ```
 Output:
 ```
@@ -221,7 +218,7 @@ Jocasta Rupert
 Discussion:<br>
 Suppose we wanted a *count* of customers who only ordered one item. Those familar with Excel's SUMIF might try to say this:
 ``` 
-cat orders.csv | proj Name:{customer\ name} sum[if[count[orderid]==1,1,0]]
+cat orders.csv | proj Name:customer\ name sum[if[count[orderid]==1,1,0]]
 ```
 But this is not supported, and we are told:
 ```
@@ -229,7 +226,7 @@ Aggregate functions cannot be composed
 ```
 Instead, pipe the result and count that result instead:
 ```
-cat orders.csv | proj Name:{customer\ name} where[count[orderid]==1] | proj count[Name]
+cat orders.csv | proj Name:customer\ name where[count[orderid]==1] | proj count[Name]
 ```
 Output:
 ```
@@ -244,11 +241,11 @@ count[Name]
 ### 10. Use the `join` operator to produce a report of ten product returns and their reasons.
 Input:
 ```
-cat orders.csv | proj join[returns.csv] where[orderid==right::orderid] Name:{"Product\ Name"} right::Reason top[10]
-Name,Reason
+cat orders.csv | proj join[returns.csv] where[orderid==right::orderid] Product\ Name Reason:right::Reason top[10]
 ```
 Output:
 ```
+Product Name,Reason
 "Wirebound Service Call Books, 5 1/2"" x 4""",Product Description Inaccurate
 "Eldon Expressions Desk Accessory, Wood Pencil Holder, Oak",Product Description Inaccurate
 Staple-on labels,Product Description Inaccurate
