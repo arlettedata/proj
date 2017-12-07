@@ -1,0 +1,18 @@
+<top>
+   <row>
+      <fld>Name</fld>
+      <val>Brian</val>
+      <fld>Color</fld>
+      <val>Green</val>
+      <fld>Food</fld>
+      <val>Chinese</val>
+    </row>
+   <row>
+      <fld>Name</fld>
+      <val>Scarlett</val>
+      <fld>Color</fld>
+      <val>Yellow</val>
+      <fld>Food</fld>
+      <val>Cincinnati Chili</val>
+    </row>
+</top>

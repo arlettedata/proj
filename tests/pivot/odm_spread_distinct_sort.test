@@ -1,0 +1,20 @@
+# This is a test of several complex behaviors.
+
+# we pivot all the columns but hide the two fields that are not to be part of the distinct check (they vary on every row)
+
+# when references to pivoted columns are made, and those references are contributing to a column that is output, 
+# we don't create an output column for those pivoted columns
+
+# the choice of min[] effectively hides RECORD_SEQ_ID and RUN_ID from the distinctness
+
+# because sort[] is not contributing to an output column of its own, its reference to DOMAIN does NOT cause
+# the pivoted column DOMAIN to be hidden
+
+--in=odm.xml
+Study..OID DOMAIN,...,RECORD_SEQ_ID,RUN_ID:pivot[ItemData..ItemOid,ItemData..value] 
+
+# cause empty DOMAIN values to be last by picking a high ASCII value for those
+sort[if[DOMAIN,DOMAIN,"~"]]
+
+--distinct 
+non_distinct:min[0,RECORD_SEQ_ID+RUN_ID]

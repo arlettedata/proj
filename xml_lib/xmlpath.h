@@ -434,10 +434,6 @@ public:
         }
     }
 
-    int GetMatchDepth() const
-    {
-        return m_matchDepth;
-    }
 
 private:
     friend class XmlMatcher;

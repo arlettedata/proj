@@ -100,18 +100,17 @@ private:
 
         // Mark the columns that we'll index with (for where[] equality comparisons)
         std::vector<size_t> indices;
-        for (auto& column : joinSpec.columns) {
-            if (column->flags & XmlColumn::Indexed) {
-                assert(column->index != -1); 
-                indices.push_back(column->index);
-            }
+        for (auto& expr : joinSpec.equalityExprsRight) {
+            XmlColumnPtr column = expr->GetColumnRef();
+            assert(column && (column->flags & XmlColumn::JoinedColumn));
+            indices.push_back(column->index);
         }
+        StreamingXml::XmlRowHash hash(indices);
         
         // Specify function to read the join table rows and write to an indexed join table.
         XmlIndexedRows indexedJoin;
         m_parser->SetRowCallback([&](size_t rowIdx) {
             const XmlRow& xmlRow = m_parser->GetRow(rowIdx);
-            StreamingXml::XmlRowHash hash(indices);
             size_t index = hash(xmlRow);
             XmlRowsPtr xmlRows;
             auto it = indexedJoin.find(index);
@@ -146,11 +145,11 @@ private:
                     ? columnArg.substr(1) 
                     : columnArg.substr(0, columnArg.size() - 1);
                 if (argFile.empty()) {
-                    XmlUtils::Error("Missing argument-inclusion filename after @"); /**/
+                    /**/XmlUtils::Error("Missing argument-inclusion filename after @");
                 }
                 std::ifstream input(argFile);
                 if (input.fail()) {
-                    XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile); /**/
+                    /**/XmlUtils::Error("Argument-inclusion filename could not be opened: %s", argFile);
                 }
                 std::string line;
                 while (XmlUtils::GetLine(input, line)) {
@@ -209,38 +208,41 @@ private:
     {
         std::unique_ptr<Json2Xml> json2xml;
         std::string backBuffer;
+        std::queue<std::string> backLines;
         bool parseAsLogOrCsv = false;
-        try {
-            std::stringstream strm;
-            std::shared_ptr<StreamingXml::XmlOutput> xml(new StreamingXml::XmlOutput(strm));
-            std::function<void()> process = [&] {
-                m_parser->Parse(strm);
-                strm.str(std::string()); // reset
-                strm.clear();
-            };
-            xml->SetPopTagCallback(process);
-            json2xml.reset(new Json2Xml(xml, "json"));
-            while (json2xml->Read(*m_input).get()) {
-                process();
+        bool csvOnly = m_parser->GetQuerySpec()->IsFlagSet(XmlQuerySpec::CsvOnly); 
+        if (!csvOnly) {
+            try {
+                std::stringstream strm;
+                std::shared_ptr<StreamingXml::XmlOutput> xml(new StreamingXml::XmlOutput(strm));
+                std::function<void()> process = [&] {
+                    m_parser->Parse(strm);
+                    strm.str(std::string()); // reset
+                    strm.clear();
+                };
+                xml->SetPopTagCallback(process);
+                json2xml.reset(new Json2Xml(xml, "json"));
+                while (json2xml->Read(*m_input).get()) {
+                    process();
+                }
             }
-        }
-        catch (XmlInputException ex) {
-            backBuffer = std::move(json2xml->GetBackBuffer()); 
-            if (ex.getPossibleFormat() == "xml") {
-                m_parser->UngetString(backBuffer);
-                m_parser->Parse(*m_input);
-            } else {
+            catch (XmlInputException ex) {
+                backBuffer = std::move(json2xml->GetBackBuffer()); 
+                if (ex.getPossibleFormat() == "xml") {
+                    m_parser->UngetString(backBuffer);
+                    m_parser->Parse(*m_input);
+                } else {
+                    parseAsLogOrCsv = true;
+                }
+            } 
+            catch (std::exception&) {
+                backBuffer = std::move(json2xml->GetBackBuffer()); 
                 parseAsLogOrCsv = true;
             }
-        } 
-        catch (std::exception&) {
-            backBuffer = std::move(json2xml->GetBackBuffer()); 
-            parseAsLogOrCsv = true;
         }
 
-        if (parseAsLogOrCsv) {
-            std::queue<std::string> backLines;
-            if (!ParseLog(backBuffer, backLines)) {
+        if (csvOnly || parseAsLogOrCsv) {
+            if (csvOnly || !ParseLog(backBuffer, backLines)) {
                 if (!ParseCsv(backLines)) {
                     XmlUtils::Error("Input not recognized as json, xml, csv/tsv, or log");
                 }

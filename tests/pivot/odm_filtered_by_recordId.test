@@ -1,0 +1,1 @@
+--in=odm.xml ...,RECORD_SEQ_ID:pivot[itemdata..itemoid,itemdata..value,true] where[and[RECORD_SEQ_ID>=644916,RECORD_SEQ_ID<=644920]]

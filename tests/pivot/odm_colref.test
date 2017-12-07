@@ -1,0 +1,1 @@
+--in=odm.xml Study..OID Domain,Sex:pivot[ItemData..ItemOid,ItemData..value] D:Domain S:Sex distinct[]

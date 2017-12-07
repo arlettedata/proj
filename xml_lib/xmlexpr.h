@@ -651,10 +651,15 @@ public:
                 break;
 
             case Opcode::OpColumnRef:
+                expr->SetType(XmlType::String);
+                break;
+
+            // identity functions: expression takes on type of arg
+            case Opcode::OpHidden:
             case Opcode::OpWhere:
-            case Opcode::OpAny:
             case Opcode::OpSync:
-                expr->SetType(arg0->GetType()); // same type as arg
+            case Opcode::OpAny: // one of the aggregates 
+                expr->SetType(arg0->GetType()); 
                 break;
 
             case Opcode::OpCase:
@@ -899,7 +904,10 @@ public:
                     expr->SetValue(joinTable[rowIdx][colIdx]); 
                 }
                 else {
-                    if (m_context->passType == XmlPassType::StoredValuesPass && 
+                    if (column->expr->GetOperator()->opcode == XmlOperator::OpHidden) {
+                        Evaluate(column->expr); 
+                    } 
+                    else if (m_context->passType == XmlPassType::StoredValuesPass && 
                         column->expr->flags & XmlExpr::SubtreeContainsAggregate) {
                         // aggregate columns are recomputed on every stored row, so we need to  
                         // reevaluate the cached expression value
@@ -1276,9 +1284,11 @@ public:
                 break;
             }
 
+            // identity functions
             case Opcode::OpWhere:
             case Opcode::OpSync:
-                expr->SetValue(std::move(arg0)); // identity function
+            case Opcode::OpHidden:
+                expr->SetValue(std::move(arg0)); 
                 break;
         }
 

@@ -1,0 +1,7 @@
+# Take everything in this test...
+@odm_spread_distinct_sort.test
+
+# and add filter. In this case, give the domains that start with C
+where[left[DOMAIN,1]=="C"]
+
+

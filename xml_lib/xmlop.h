@@ -37,7 +37,7 @@ struct XmlOperator
 {
     enum OpFlags
     {
-        GatherData = 0x1,
+        GatherData = 0x1, // no longer being used, but kept in in case we want it again
         Aggregate = 0x2,
         StartMatchEval = 0x4,
         EndMatchEval = 0x8,
@@ -68,8 +68,8 @@ struct XmlOperator
         OpReal, OpInt, OpBool, OpStr, OpDateTime, OpType, // typing 
         OpPath, OpPivotPath, OpDepth, OpAttr, OpNodeNum, OpNodeName, OpNodeStart, OpNodeEnd, OpLineNum, // immediate functions (evaluated on path match)
         OpAny, OpSum, OpMinAggr, OpMaxAggr, OpAvg, OpStdev, OpVar, OpCov, OpCorr, OpCount, // aggregate functions
-        OpFirst, OpTop, OpSort, OpPivot, OpDistinct, OpWhere, OpSync, OpRoot, OpIn, OpJoin, // directives
-        OpCase, OpInputHeader, OpJoinHeader, OpOutputHeader, OpHelp // directives
+        OpFirst, OpTop, OpSort, OpPivot, OpDistinct, OpHidden, OpWhere, OpSync, OpRoot, OpIn, OpJoin, // directives
+        OpCsvOnly, OpCase, OpInputHeader, OpJoinHeader, OpOutputHeader, OpHelp // directives
         // clang-format on
     };
 
@@ -169,7 +169,8 @@ public:
             XmlOperatorPtr(new XmlOperator( "<Literal>",  XmlOperator::OpLiteral,      0, 0, XmlType::Unknown )), 
             XmlOperatorPtr(new XmlOperator( "case",       XmlOperator::OpCase,         0, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
             XmlOperatorPtr(new XmlOperator( "help",       XmlOperator::OpHelp,         0, 0, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
-/*synonym*/ XmlOperatorPtr(new XmlOperator( "usage",      XmlOperator::OpHelp,         0, 0, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),            XmlOperatorPtr(new XmlOperator( "-" ,         XmlOperator::OpNeg,          1, 1, XmlType::Real )), 
+/*synonym*/ XmlOperatorPtr(new XmlOperator( "usage",      XmlOperator::OpHelp,         0, 0, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
+            XmlOperatorPtr(new XmlOperator( "csvonly",    XmlOperator::OpCsvOnly,      0, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
             XmlOperatorPtr(new XmlOperator( "in",         XmlOperator::OpIn,           1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly | XmlOperator::UnquotedStringFirstArg )),
             XmlOperatorPtr(new XmlOperator( "inheader",   XmlOperator::OpInputHeader,  0, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
             XmlOperatorPtr(new XmlOperator( "outheader",  XmlOperator::OpOutputHeader, 0, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
@@ -193,9 +194,11 @@ public:
             XmlOperatorPtr(new XmlOperator( "first",      XmlOperator::OpFirst,        1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
             XmlOperatorPtr(new XmlOperator( "top",        XmlOperator::OpTop,          1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
             XmlOperatorPtr(new XmlOperator( "sort",       XmlOperator::OpSort,         1, U, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
-            XmlOperatorPtr(new XmlOperator( "distinct",   XmlOperator::OpDistinct,     0, 0, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
+            XmlOperatorPtr(new XmlOperator( "distinct",   XmlOperator::OpDistinct,     0, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly )),
+            XmlOperatorPtr(new XmlOperator( "hidden",     XmlOperator::OpHidden,       1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly )),
             XmlOperatorPtr(new XmlOperator( "not",        XmlOperator::OpNot,          1, 1, XmlType::Boolean )), 
             XmlOperatorPtr(new XmlOperator( "!",          XmlOperator::OpNot,          1, 1, XmlType::Boolean )), 
+            XmlOperatorPtr(new XmlOperator( "-" ,         XmlOperator::OpNeg,          1, 1, XmlType::Real )), 
             XmlOperatorPtr(new XmlOperator( "*",          XmlOperator::OpMul,          2, 2, XmlType::Real, XmlOperator::BinaryInfix )), 
             XmlOperatorPtr(new XmlOperator( "/",          XmlOperator::OpDiv,          2, 2, XmlType::Real, XmlOperator::BinaryInfix )), 
             XmlOperatorPtr(new XmlOperator( "%",          XmlOperator::OpMod,          2, 2, XmlType::Integer, XmlOperator::BinaryInfix )), 

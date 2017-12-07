@@ -1,0 +1,17 @@
+StudyID,Domain,Sex,right::desc
+0974-004,DM,F,Demographics
+0974-004,SV,,Subject Visit
+0974-004,AE,,Adverse Event
+0974-004,DS,,Disposition
+0974-004,MH,,Medical History
+0974-004,CM,,Concomitant Med
+0974-004,EX,,Exposure (Study Drug)
+0974-004,PR,,Procedures
+0974-004,PE,,Physical Exam
+0974-004,LB,,Laboratory
+0974-004,VS,,Vital Signs
+0974-004,QS,,Questionnaires
+0974-004,EG,,ECG
+0974-004,CF,,Clinical Finding
+0974-004,DC,,Drug Concentration
+0974-004,CO,,Comments

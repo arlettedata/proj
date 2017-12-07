@@ -96,9 +96,12 @@ public:
 
     void Reset(XmlPassType passType, XmlPassType lastPassType) {
         if (!m_distinctRows.get()) {
-            size_t numValueCols = m_querySpec->GetNumValueColumns();
+            // pivoting can increase number of col, so express as a callback
+            auto numValueColsFunc = [this]{
+                return m_querySpec->GetNumValueColumns();
+            };
             m_distinctRows.reset(new DistinctRowsMap(10, // use GCC's default
-                XmlRowHash(numValueCols), XmlRowEquals(numValueCols)));
+                XmlRowHash(numValueColsFunc), XmlRowEquals(numValueColsFunc)));
         }
 
         SetFlags(ParseStopped, false);
@@ -159,8 +162,17 @@ public:
 
     void OnEndTag() 
     {
-        if (m_pivoter.OnEndTag()) {
-            EmitPivotedRows();
+        XmlPivoter::Result result(std::move(m_pivoter.TryPivot(m_seqRows)));
+        if (result.WasPivoted()) {
+            if (JoinAndCommitRow(m_seqRows.back())) {
+                result.Accept();
+            }
+            else {
+                if (result.Reject()) {
+                    SetFlags(RecycleStorage, true);
+                    RemoveRecycledRow();
+                }
+            }
         }
     }
 
@@ -169,26 +181,11 @@ public:
         if (m_pivoter.Enabled()) {
             XmlRow& row = AllocRow(m_pivoter.GetPartitionSize());
             XmlExprEvaluator evaluator(m_context);
-            m_pivoter.OnRow(row, evaluator);
+            m_pivoter.AccumulateRow(row, evaluator);
         }
-        else if (!CommitRow(AllocRow())) {
+        else if (!JoinAndCommitRow(AllocRow())) {
             SetFlags(RecycleStorage, true);
             RemoveRecycledRow();
-        }
-    }
-
-    void EmitPivotedRows()
-    {
-        if (m_pivoter.Enabled()) {
-            auto pivotContext(std::move(m_pivoter.DoPivot(m_seqRows)));
-            if (CommitRow(*pivotContext.pivotedRow)) {
-                m_pivoter.CommitPivot(pivotContext);
-            }
-            else {
-                SetFlags(RecycleStorage, true);
-                m_pivoter.RejectPivot(pivotContext);
-                RemoveRecycledRow();
-            }
         }
     }
 
@@ -269,9 +266,7 @@ private:
         // 2: we are continuing a pivoting partition
         // 3: don't have any rows at all yet
         if ((keepAllRows && !IsFlagSet(RecycleStorage)) || (currPartitionSize > 0) || (m_seqRows.size() == 0)) {
-            size_t numValueCols = m_querySpec->GetNumValueColumns();
-            size_t numSortValues = m_querySpec->GetNumSortValues();
-            m_seqRows.push_back(std::move(XmlRow(numValueCols + numSortValues)));
+            m_seqRows.push_back(std::move(XmlRow(m_querySpec->GetRowSize())));
         }
 
         // We can recycle this row if we're not batching them
@@ -280,15 +275,15 @@ private:
         return m_seqRows.back();
     }
 
-    bool CommitRow(XmlRow& row) // returns false if filter fails
-    {
+    bool JoinAndCommitRow(XmlRow& row) // returns false if filter fails
+    {        
         bool committed = false;
 
         // Get join table rows, if applicable
         bool leftSideOfJoin = m_querySpec->IsFlagSet(XmlQuerySpec::LeftSideOfJoin);
         if (leftSideOfJoin) {
             auto& joinSpec = m_querySpec->GetJoinSpec();
-            auto& exprs = joinSpec.equalityExprs;
+            auto& exprs = joinSpec.equalityExprsLeft;
 
             // Get the indexed bucket of rows, based on the hash of the relevant expression evaluations.
             m_joinKey.clear();
@@ -377,6 +372,13 @@ private:
                     }
                     valueIdx++;
                 }
+            } 
+            else if (column->IsPivotResult() && column->IsOutput()) {
+                // Pivoter::DoPivot() wrote the pivoted values to the column expressions, 
+                // so just move the value to the row.
+                size_t valueIdx = column->valueIdx;
+                assert(valueIdx != -1);
+                row[valueIdx] = column->expr->GetValue();
             }
             else if (!column->IsAggregate() && column->IsOutput()) {
                 size_t valueIdx = column->valueIdx;

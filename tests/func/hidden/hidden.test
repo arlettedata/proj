@@ -1,0 +1,1 @@
+--in=data.xml sum:hidden[a+b] c:sum*2

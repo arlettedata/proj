@@ -1,0 +1,1 @@
+ in[foobar.csv] label join[foobar_map.csv] ...:pivot[right::a,label]

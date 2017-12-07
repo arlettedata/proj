@@ -992,8 +992,8 @@ struct XmlColumn
         Filter = 0x2,
         Aggregate = 0x4,
         JoinedColumn = 0x8,
-        Indexed = 0x10, // set when a joined column is also where[] equality operand
-        PivotResult = 0x20
+        PivotResult = 0x10,
+        PivotResultReferenced = 0x20
     };
 
     XmlColumn(const std::string& name, XmlExprPtr expr = nullptr, unsigned int flags = 0)
@@ -1035,6 +1035,11 @@ struct XmlColumn
     {
         return !!(flags & PivotResult);
     }
+
+    bool IsPivotResultReferenced() const
+    {
+        return !!(flags & PivotResultReferenced);
+    }
 };
 
 typedef std::shared_ptr<XmlColumn> XmlColumnPtr;
@@ -1047,6 +1052,7 @@ struct IColumnEditor
     virtual XmlColumnPtr GetColumn(const std::string& colName) const = 0;
     virtual void InsertColumn(XmlColumnPtr column, size_t idx = npos) = 0;
     virtual void DeleteColumn(XmlColumnPtr column) = 0;
+    virtual size_t GetRowSize() const = 0;
 };
 
 struct XmlNodeInfo
@@ -1117,29 +1123,49 @@ inline bool equalsXmlRow(const XmlRow& left, const XmlRow& right, size_t length)
     return true;
 }
 
-// custom hash functor, used to exclude sort values, which are at the end of the row vector
+// custom hash functor with custom index set
 class XmlRowHash
 {
 public:
-    XmlRowHash(size_t seqLength)
+    XmlRowHash(size_t length)
+        : fixedIndices(false)
     {
-        for (size_t i = 0; i < seqLength; i++) {
-            indices.push_back(i);
-        }
+        updateIndices(length);
+    }
+
+    XmlRowHash(std::function<size_t()> numColsFunc)
+        : numColsFunc(numColsFunc)
+        , fixedIndices(false)
+    {
     }
     
     XmlRowHash(const std::vector<size_t>& indices)
+        : indices(indices)
+        , fixedIndices(true)
     {
-        this->indices = indices;
     }
 
     size_t operator()(const XmlRow& row) const
     {
+        updateIndices(numColsFunc ? numColsFunc() : row.size());
         return hashXmlRow(row, indices);
     }
 
 private:
-    std::vector<size_t> indices;
+    void updateIndices(size_t rowSize) const {
+        if (!fixedIndices) {
+            if (rowSize < indices.size()) {
+                indices.clear();
+            }
+            for (size_t i = indices.size(); i < rowSize; i++) {
+                indices.push_back(i);
+            }
+        }
+    }
+    
+    bool fixedIndices;
+    mutable std::vector<size_t> indices;
+    std::function<size_t ()> numColsFunc;
 };
 
 // custom equals functor
@@ -1147,17 +1173,23 @@ class XmlRowEquals
 {
 public:
     XmlRowEquals(size_t length)
+        : length(length)
     {
-        this->length = length;
+    }
+
+    XmlRowEquals(std::function<size_t()> numColsFunc)
+        : numColsFunc(numColsFunc)
+    {
     }
 
     size_t operator()(const XmlRow& left, const XmlRow& right) const
     {
-        return equalsXmlRow(left, right, length);
+        return equalsXmlRow(left, right, numColsFunc ? numColsFunc() : length);
     }
 
 private:
     size_t length;
+    std::function<size_t ()> numColsFunc;
 };
 
 enum XmlPassType

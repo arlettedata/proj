@@ -241,12 +241,6 @@ private:
 		if (m_possiblyXml || m_possiblyLog) {
             m_backBuffer += m_currChar;
 		}
-#ifdef _DEBUG
-		m_recallBuffer += m_currChar;
-		if (m_recallBuffer.size() > 256) {
-			m_recallBuffer = m_recallBuffer.substr(128);
-		}
-#endif
     }
 
     void popBackBuffer() 
@@ -254,10 +248,6 @@ private:
 		if( (m_possiblyXml || m_possiblyLog) && m_backBuffer.length() > 0) {
             m_backBuffer.pop_back();
 		}
-#ifdef _DEBUG
-		if (m_recallBuffer.size())
-			m_recallBuffer.erase(m_recallBuffer.size() - 1);
-#endif
 	}
 
     std::string ReadString(char quoteChar)
@@ -405,13 +395,6 @@ private:
                 msg << "<unknown state: " << state << ">";
         }
         msg << std::endl;
-#ifdef _DEBUG
-        // feed more characters into the recall buffer
-        for (int i = 0; i < 32; i++) {
-            getch();
-        }
-        msg << "Input region: " << m_recallBuffer;
-#endif
         throw unexpected_token_exception(msg.str());
     }
 
@@ -716,7 +699,6 @@ private:
 	char m_currChar;
 	size_t m_charCount;
 	size_t m_lineCount;
-	std::string m_recallBuffer;
 };
 
 } // namespace StreamingXml

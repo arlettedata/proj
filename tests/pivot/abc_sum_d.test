@@ -1,0 +1,1 @@
+--in=abc.xml d:pivot[nodename[values.*],values.*,true] sum[d]

@@ -1,0 +1,1 @@
+--in=abc.xml ...:pivot[nodename[values.*],values.*,true]

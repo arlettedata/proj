@@ -22,7 +22,6 @@
 #pragma once
 
 #include "xmlpath.h"
-#include <unordered_set>
 
 namespace StreamingXml
 {
@@ -35,19 +34,38 @@ class XmlPivoter
         Partitioning
     };
 
-    struct Context
+public:
+    class Result
     {
-        Context(XmlRows& rows)
-            : rows(rows)
-            , pivotedRow(nullptr)
+    public:
+        Result(XmlPivoter* encl)
+            : encl(encl)
+            , pivoted(false)
         {
         }
-        XmlRows& rows;
-        XmlRow* pivotedRow;
+        
+        bool WasPivoted()
+        {
+            return pivoted;
+        }
+        
+        void Accept() 
+        {
+            encl->Accept();
+        }
+
+        bool Reject() 
+        {
+            return encl->Reject(*this);
+        }
+
+    private:
+        bool pivoted;
+        XmlPivoter* encl;
         std::vector<XmlColumnPtr> newColumns;
+        friend class XmlPivoter;
     };
 
-public:
     XmlPivoter(XmlParserContextPtr context, IColumnEditor* columnEditor)
         : m_context(context)
         , m_columnEditor(columnEditor)
@@ -113,24 +131,128 @@ public:
         }
     }
 
-    void OnRow(XmlRow& row, XmlExprEvaluator& evaluator)
+    void AccumulateRow(XmlRow& row, XmlExprEvaluator& evaluator)
     {
-        if (Enabled()) {
-            if (m_state == StartNewPartition) {
-                assert(GetPartitionSize() == 0);
-                if (m_trainingPartitionDepth) {
-                    assert(m_context->currDepth >= 0);
-                    m_partitionDepth = m_context->currDepth;
-                }
-            }
+        assert(Enabled());
 
-            m_state = Partitioning;
-            m_names.push_back(std::move(evaluator.Evaluate(GetNamesExpr()).sval));
-            m_values.push_back(std::move(evaluator.Evaluate(GetValuesExpr())));
+        if (m_state == StartNewPartition) {
+            assert(GetPartitionSize() == 0);
+            if (m_trainingPartitionDepth) {
+                assert(m_context->currDepth >= 0);
+                m_partitionDepth = m_context->currDepth;
+            }
+        }
+
+        m_state = Partitioning;
+        m_names.push_back(std::move(evaluator.Evaluate(m_column->expr->GetArg(0)).sval));
+        m_values.push_back(std::move(evaluator.Evaluate(m_column->expr->GetArg(1))));
+    }
+
+    size_t GetPartitionSize() const
+    {
+        assert(m_names.size() == m_values.size());
+        return m_names.size();
+    }
+
+    Result TryPivot(std::vector<XmlRow>& rows)
+    {
+        Result result(this);
+        
+        if (!Enabled() || !IsAtEndOfPartition()) {
+            return result; // with result.pivoted = false;
+        }
+
+        // Clear previous values on existing pivot columns
+        std::string emptyString;
+        for (auto& column : m_columnEditor->GetColumns()) {
+            if (column->IsPivotResult()) {
+                column->expr->SetValue(emptyString);
+            }
+        }
+
+        // Gather names
+        size_t partitionSize = GetPartitionSize();
+        assert(partitionSize <= rows.size());
+        size_t firstRowIdx = rows.size() - partitionSize;
+        for (size_t idx = 0; idx < partitionSize; idx++) {
+            size_t rowIdx = firstRowIdx + idx;
+            const std::string& colName = m_names[idx];
+            XmlColumnPtr column = m_columnEditor->GetColumn(colName);
+            if (!column && m_collectingColumns && m_spreadIdx != -1) {
+                column = InsertNewColumn(colName, m_spreadIdx);
+                assert(m_columnEditor->GetColumn(colName) == column);
+                result.newColumns.push_back(column);
+                m_spreadIdx++;
+            }
+            if (column) {
+                column->flags |= XmlColumn::PivotResultReferenced;
+                // Write the pivoted value to the expression. XmlQuery will transfer the value to the stored row.
+                column->expr->SetValueAndType(m_values[idx]);
+            }
+        }
+        
+        // Reset partition
+        m_names.clear();
+        m_values.clear();
+
+        if (result.newColumns.size() > 0 ) {
+            // Remove all the pivoted rows and create a new row of the new size
+            rows.erase(rows.begin() + firstRowIdx, rows.end());
+            rows.push_back(std::move(XmlRow(m_columnEditor->GetRowSize())));
+        } 
+        else {
+            // Remove all the pivoted rows (save the first one which is recycled)
+            rows.erase(rows.begin() + firstRowIdx + 1, rows.end());
+        }
+                   
+        result.pivoted = true;
+        return std::move(result);
+    }
+
+    void CheckUnreferenced() const
+    {
+        int cnt = 0;
+        std::string colNames;
+        for (auto& column : m_columnEditor->GetColumns()) {
+            if (column->IsPivotResult() && !column->IsPivotResultReferenced()) {
+                colNames += std::string((cnt++ ? ", " : "")) + column->name;
+            }
+        }
+        if (cnt) {
+            /**/XmlUtils::Error("Pivot column%s not found in input: %s", cnt ? "s" : "", colNames);
         }
     }
 
-    bool OnEndTag()
+private:
+    // Called after XmlQuery passed filtering through Result::Commit()
+    void Accept()
+    {
+        assert(Enabled());
+
+        if (!m_jagged) {
+            m_collectingColumns = false;
+        }
+    }
+
+    // Called after XmlQuery failed filtering through Result::Reject()
+    bool Reject(Result& result)
+    {
+        assert(Enabled());
+
+        // Rollback on the new columns that were just added, since the resulting rows were all filtered out.
+        for (auto column : result.newColumns) {
+            m_columnEditor->DeleteColumn(column);
+            if (m_spreadIdx != -1) {
+                assert(m_spreadIdx > 0);
+                m_spreadIdx--;
+            }
+        }
+
+         // return true to recycle the row (it has the right size), false to discard the row
+         return (result.newColumns.size() == 0);
+    }
+
+    bool IsAtEndOfPartition()
     {
         int currDepth = m_context->currDepth;
         if (Enabled() && m_state == Partitioning) {
@@ -151,131 +273,15 @@ public:
         }
         return false;
     }
-
-    size_t GetPartitionSize() const
-    {
-        assert(m_names.size() == m_values.size());
-        return m_names.size();
-    }
-
-    Context DoPivot(std::vector<XmlRow>& rows)
-    {
-        assert(Enabled());
-        Context context(rows);
-
-        // Clear previous values on existing pivot columns
-        std::string emptyString;
-        for (auto& column : m_columnEditor->GetColumns()) {
-            if (column->IsPivotResult()) {
-                column->expr->SetValue(emptyString);
-            }
-        }
-
-        // Gather names
-        size_t partitionSize = GetPartitionSize();
-        assert(partitionSize <= context.rows.size());
-        size_t firstRowIdx = context.rows.size() - partitionSize;
-        bool colsAdded = false;
-        for (size_t idx = 0; idx < partitionSize; idx++) {
-            size_t rowIdx = firstRowIdx + idx;
-            const std::string& colName = m_names[idx];
-            const XmlValue& colValue = m_values[idx];
-            XmlColumnPtr column = m_columnEditor->GetColumn(colName);
-            if (!column && m_collectingColumns && m_spreadIdx != -1) {
-                column = InsertNewColumn(colName, m_spreadIdx);
-                assert(m_columnEditor->GetColumn(colName) == column);
-                context.newColumns.push_back(column);
-                m_spreadIdx++;
-                colsAdded = true;
-            }
-            if (column) {
-                m_referencedColumns.insert(column);
-                column->expr->SetValueAndType(colValue);
-            }
-        }
-
-        // remove all the pivoted rows (save the first one which is used for the pivot result)
-        context.rows.erase(context.rows.begin() + firstRowIdx + 1, context.rows.end());
-
-        // Capture the resulting row
-        XmlRow& row = context.rows.back();
-        context.pivotedRow = &row;
-
-        // Add the space for the current row so we can evaluate its columns
-        for (auto& column : context.newColumns) {
-            row.insert(row.begin() + column->valueIdx, XmlValue());
-        }
-
-        // Reset partition
-        m_names.clear();
-        m_values.clear();
-
-        return std::move(context);
-    }
-
-    void CommitPivot(Context& context)
-    {
-        assert(Enabled());
-        if (!m_jagged) {
-            m_collectingColumns = false;
-        }
-    }
-
-    bool RejectPivot(Context& context)
-    {
-        assert(Enabled());
-
-        // Rollback on the new columns that were just added, since the resulting rows were all filtered out.
-        for (auto column : context.newColumns) {
-            m_columnEditor->DeleteColumn(column);
-            if (m_spreadIdx != -1) {
-                assert(m_spreadIdx > 0);
-                m_spreadIdx--;
-            }
-        }
-        // signal caller to call RemoveRecycledRow 
-        return true;
-    }
-
-    void CheckUnreferenced() const
-    {
-        int cnt = 0;
-        std::string colNames;
-        for (auto& column : m_columnEditor->GetColumns()) {
-            if (column->IsPivotResult() && (m_referencedColumns.find(column) == m_referencedColumns.end())) {
-                colNames += std::string((cnt++ ? ", " : "")) + column->name;
-            }
-        }
-        if (cnt) {
-            /**/XmlUtils::Error("Pivot column%s not found in input: %s", cnt ? "s" : "", colNames);
-        }
-    }
-
-private:
+    
     XmlColumnPtr InsertNewColumn(const std::string& colName, size_t idx = npos)
     {
         XmlExprPtr expr(new XmlExpr);
         expr->SetOperator(XmlOperatorFactory::GetInstance(Opcode::OpLiteral));
+        expr->SetType(XmlType::String);
         XmlColumnPtr column(new XmlColumn(colName, expr, XmlColumn::Output | XmlColumn::PivotResult));
         m_columnEditor->InsertColumn(column, idx);
         return column;
-    }
-
-    XmlColumnPtr GetColumn() const
-    {
-        return m_column;
-    }
-
-    XmlExprPtr GetNamesExpr() const
-    {
-        // Assumes already validated and initialized
-        return m_column->expr->GetArg(0);
-    }
-
-    XmlExprPtr GetValuesExpr() const
-    {
-        // Assumes already validated and initialized
-        return m_column->expr->GetArg(1);
     }
 
 private:
@@ -292,7 +298,6 @@ private:
     int m_partitionDepth;
     bool m_firstPass;
     bool m_collectingColumns;
-    std::unordered_set<XmlColumnPtr> m_referencedColumns;
 };
 
 } // namespace StreamingXml

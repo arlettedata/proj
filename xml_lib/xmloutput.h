@@ -66,12 +66,6 @@ public:
 
     virtual ~XmlOutput()
     {
-#ifdef _DEBUG
-        if (!std::uncaught_exception()) {
-            assert((m_tagStack.empty()) || !"~XmlOutput(): PushTag/PopTag mismatch");
-            assert(m_indentLevel == 0);
-        }
-#endif // _DEBUG
         CloseFile();
     }
 

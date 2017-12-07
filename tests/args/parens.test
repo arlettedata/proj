@@ -1,0 +1,6 @@
+# proj accepts parentheses as well as brackets for expressions. 
+# We prefer brackets in Bash so we don't need to escape.
+# This tests that parens work.
+
+--in=data.xml min(a,b) (a*b)+c
+ 

@@ -1,0 +1,21 @@
+# ref
+# 2007-10-23T11:08:47-04:00
+# 0123456789012345678901234
+
+# This test takes the above text and outputs the corresponding utc time.
+# If you want to say "yikes" I've done it too.  This is more of a "yes, it can be done" test.
+
+--in=dt.csv --csvonly
+
+date:hidden[left[dt,10]]
+time:hidden[right[dt,14]]
+localtime:hidden[left[time,8]]
+localdatetime:hidden[datetime[concat[date&" ",localtime]]]
+offset:hidden[right[time,6]]
+signch:hidden[left[offset,1]]
+sign:hidden[if[left[offset,1]=='-',-1,1]]
+hr:hidden[right[left[offset,3],2]]
+min:hidden[right[offset,2]]
+adjsec:hidden[sign*[hr*60+min]*60]
+
+dt utc:datetime[int[localdatetime]+adjsec]
