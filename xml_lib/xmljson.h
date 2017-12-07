@@ -186,7 +186,7 @@ public:
                     break;
 
                 default:
-    def:
+                def:
                     UnexpectedToken(STATE_TOP, __FUNCTION__, token, value);
             }
         }

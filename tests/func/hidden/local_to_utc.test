@@ -1,10 +1,10 @@
-# ref
+# example data
 # 2007-10-23T11:08:47-04:00
-# 0123456789012345678901234
+#  123456789 123456789 1234
 
 # This test takes the above text and outputs the corresponding utc time.
-# If you want to say "yikes" I've done it too.  This is more of a "yes, it can be done" test.
 
+# --csvonly used to avoid log interpretation, since the first line begins with a date pattern
 --in=dt.csv --csvonly
 
 date:hidden[left[dt,10]]
