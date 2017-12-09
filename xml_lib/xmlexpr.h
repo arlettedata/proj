@@ -591,6 +591,12 @@ public:
                 arg1->ChangeType(XmlType::String);
                 break;
 
+            case Opcode::OpFind:
+                expr->SetType(XmlType::Integer);
+                arg0->ChangeType(XmlType::String);
+                arg1->ChangeType(XmlType::String);
+                break;
+
             case Opcode::OpFormatSec:
             case Opcode::OpFormatMs:
                 arg0->ChangeType(XmlType::Integer);
@@ -1196,7 +1202,11 @@ public:
                 break;
 
             case Opcode::OpContains:
-                expr->SetValue(arg0.sval.find(arg1.sval) != std::string::npos);
+                expr->SetValue(arg1.sval.empty() ? false : arg0.sval.find(arg1.sval) != std::string::npos);
+                break;
+
+            case Opcode::OpFind:
+                expr->SetValue(arg1.sval.empty() ? -1 : (__int64_t)arg0.sval.find(arg1.sval));
                 break;
 
             case Opcode::OpFormatSec: // given (fractional) seconds since 1970, get formatted datetime

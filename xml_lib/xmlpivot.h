@@ -44,7 +44,7 @@ public:
         {
         }
         
-        bool WasPivoted()
+        bool WasPivoted() const
         {
             return pivoted;
         }

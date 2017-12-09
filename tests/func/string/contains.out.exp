@@ -1,0 +1,14 @@
+a,b,"contains[a,b]"
+,,false
+11,1,true
+foo,f,true
+Foo,f,false
+bar,f,false
+foobar,foo,true
+foo,foobar,false
+abba,bb,true
+abba,bbb,false
+xyz,z,true
+,a,false
+a,,false
+a b,,false

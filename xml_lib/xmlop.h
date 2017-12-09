@@ -63,7 +63,7 @@ struct XmlOperator
         OpEQ, OpNE, OpLE, OpGE, OpLT, OpGT, //  2-arg infix 
         OpOr, OpXor, OpAnd, // 2-arg infix
         OpMin, OpMax, OpSqrt, OpPow, OpLog, OpExp, OpAbs, OpRound, OpFloor, OpCeil, // 1-arg arithmetic
-        OpLen, OpContains, OpLeft, OpRight, OpUpper, OpLower, // 1-arg string
+        OpLen, OpLeft, OpRight, OpUpper, OpLower, OpContains, OpFind, // 1-arg and 2-arg string
         OpFormatSec, OpFormatMs, OpRowNum, OpIf, // misc
         OpReal, OpInt, OpBool, OpStr, OpDateTime, OpType, // typing 
         OpPath, OpPivotPath, OpDepth, OpAttr, OpNodeNum, OpNodeName, OpNodeStart, OpNodeEnd, OpLineNum, // immediate functions (evaluated on path match)
@@ -241,7 +241,8 @@ public:
             XmlOperatorPtr(new XmlOperator( "lower",      XmlOperator::OpLower,        1, 1, XmlType::String )),
             XmlOperatorPtr(new XmlOperator( "upper",      XmlOperator::OpUpper,        1, 1, XmlType::String )),
             XmlOperatorPtr(new XmlOperator( "contains",   XmlOperator::OpContains,     2, 2, XmlType::Boolean )),
-		    XmlOperatorPtr(new XmlOperator( "formatsec",  XmlOperator::OpFormatSec,    1, 1, XmlType::String)),
+            XmlOperatorPtr(new XmlOperator( "find",       XmlOperator::OpFind,         2, 2, XmlType::Integer )),
+            XmlOperatorPtr(new XmlOperator( "formatsec",  XmlOperator::OpFormatSec,    1, 1, XmlType::String)),
             XmlOperatorPtr(new XmlOperator( "formatms",   XmlOperator::OpFormatMs,     1, 1, XmlType::String)),
             XmlOperatorPtr(new XmlOperator( "type",       XmlOperator::OpType,         1, 1, XmlType::String )),
             XmlOperatorPtr(new XmlOperator( "real",       XmlOperator::OpReal,         1, 1, XmlType::Real)),
