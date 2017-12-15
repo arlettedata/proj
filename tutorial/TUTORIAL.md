@@ -123,8 +123,8 @@ Output:
 ```
 Segment,Profit in $1000's
 Consumer,$134.12K
-Home Office,$60.3K
 Corporate,$91.98K
+Home Office,$60.3K
 ```
 Explanation:<br> There are a number of built-in functions with documentation forthcoming (until then, see `XmlOperatorFactory` in `xml_lib/xmlop.h` for a list.)  This example uses the function `round[expr,num-dec-places]` and the infix string concatenation operator `&`.  There is also a function `concat[str1,str2]` that is equivalent to `str1&str2`.
 
