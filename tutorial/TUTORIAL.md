@@ -123,8 +123,8 @@ Output:
 ```
 Segment,Profit in $1000's
 Consumer,$134.12K
-Corporate,$91.98K
 Home Office,$60.3K
+Corporate,$91.98K
 ```
 Explanation:<br> There are a number of built-in functions with documentation forthcoming (until then, see `XmlOperatorFactory` in `xml_lib/xmlop.h` for a list.)  This example uses the function `round[expr,num-dec-places]` and the infix string concatenation operator `&`.  There is also a function `concat[str1,str2]` that is equivalent to `str1&str2`.
 
@@ -137,8 +137,8 @@ cat orders.csv | proj Segment @profitArg sort[-sum[profit]]
 Output:
 ```Segment,Profit in $1000's
 Consumer,$134.12K
-Home Office,$60.3K
 Corporate,$91.98K
+Home Office,$60.3K
 ```
 Explanation:<br> argument files, which are filenames prepended or appended with '@' are a way to reuse arguments, improve readability, and get around Bash escaping.
 
