@@ -1,5 +1,5 @@
 a,b,"find[a,b]"
-,,0
+,,-1
 11,1,0
 foo,f,0
 Foo,f,-1
@@ -8,3 +8,7 @@ foobar,foo,0
 foo,foobar,-1
 abba,bb,1
 abba,bbb,-1
+xyz,z,2
+,a,-1
+a,,-1
+aa bb,a b,1

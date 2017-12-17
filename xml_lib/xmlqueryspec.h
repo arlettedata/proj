@@ -250,7 +250,7 @@ public:
         for (auto& columnSpec : columnSpecs) {
             bool explicitNames;
             // The only time more than one name is valid is on a pivot; we will check for this.
-            std::vector<std::string> names = std::move(ParseColumnNames(columnSpec, explicitNames));
+            std::vector<std::string> names(std::move(ParseColumnNames(columnSpec, explicitNames)));
             for (auto& name : names) {
                 // only create column references to explicitly named columns
                 m_allColumnNames.push_back(explicitNames ? name : emptyName); 
@@ -268,11 +268,11 @@ public:
             m_currentColumnNames = std::move(namesPerColumn[idx]);
             XmlColumnPtr column = ParseColumnExpr(columnSpec);
             ProcessExprs(column, column->expr);
-            if(!columnOverride.first.empty()) {
+            if (!columnOverride.first.empty()) {
                 column->name = columnOverride.first;
             }
             InsertColumn(column);
-            if(columnOverride.second == Opcode::OpPivot) {
+            if (columnOverride.second == Opcode::OpPivot) {
                 assert(m_pivotColumn == column);
                 pivoter.BindColumns(m_pivotColumn, m_currentColumnNames);
             }
@@ -403,7 +403,7 @@ private:
         m_tokens.reset(new XmlQueryTokenizer(columnSpec));
         
         bool explicitNames;
-        std::vector<std::string> columnNames = ParseColumnNames(columnSpec, explicitNames);
+        std::vector<std::string> columnNames(std::move(ParseColumnNames(columnSpec, explicitNames)));
         std::string columnName = columnNames[0];
 
         XmlExprPtr expr(new XmlExpr);

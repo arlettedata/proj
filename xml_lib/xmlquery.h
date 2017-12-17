@@ -162,15 +162,17 @@ public:
 
     void OnEndTag() 
     {
-        XmlPivoter::Result result(std::move(m_pivoter.TryPivot(m_seqRows)));
-        if (result.WasPivoted()) {
-            if (JoinAndCommitRow(m_seqRows.back())) {
-                result.Accept();
-            }
-            else {
-                if (result.Reject()) {
-                    SetFlags(RecycleStorage, true);
-                    RemoveRecycledRow();
+        if (m_pivoter.Enabled()) {
+            XmlPivoter::Result result(std::move(m_pivoter.TryPivot(m_seqRows)));
+            if (result.WasPivoted()) {
+                if (JoinAndCommitRow(m_seqRows.back())) {
+                    result.Accept();
+                }
+                else {
+                    if (result.Reject()) {
+                        SetFlags(RecycleStorage, true);
+                        RemoveRecycledRow();
+                    }
                 }
             }
         }
