@@ -137,8 +137,8 @@ cat orders.csv | proj Segment @profitArg sort[-sum[profit]]
 Output:
 ```Segment,Profit in $1000's
 Consumer,$134.12K
-Home Office,$60.3K
 Corporate,$91.98K
+Home Office,$60.3K
 ```
 Explanation:<br> argument files, which are filenames prepended or appended with '@' are a way to reuse arguments, improve readability, and get around Bash escaping.
 
