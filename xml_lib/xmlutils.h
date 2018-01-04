@@ -32,6 +32,7 @@
 #include <sstream>
 #include <vector>
 #include <math.h>
+#include <stdexcept>
 
 namespace StreamingXml
 {
@@ -97,7 +98,7 @@ public:
         std::stringstream ss;
         ss.setf(std::ios::boolalpha);
         ss << t;
-        return move(ss.str());
+        return std::move(ss.str());
     }
 
     static std::string ToString(double d, int precision)
@@ -269,7 +270,7 @@ public:
             }
         }
         #undef CH
-        return move(result);
+        return std::move(result);
     }
 
     static std::string& Unquote(std::string& str)
