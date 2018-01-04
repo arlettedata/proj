@@ -49,7 +49,8 @@ Row ID,OrderID,Order Date,Ship Date,Ship Mode,Customer ID,Customer Name,Segment,
 - - -
 
 ### 3. Look at the first five orders and customer names, using an input file rather than stdin.
-Input:```
+Input:
+```
 proj --in=orders.csv Order\ Date Customer\ Name first[5]
 ```
 Output:
