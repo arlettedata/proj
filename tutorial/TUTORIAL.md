@@ -11,6 +11,19 @@ While **proj** works with semi-structured text files, i.e. XML and JSON, we focu
 - - -
 
 ### 1. Build and deploy proj (in parent directory), if not done already.
+Install clang per OS:
+
+MacOS: clang is expected to be preinstalled.
+
+Ubuntu:
+```
+sudo apt-get update
+sudo apt-get install clang libc++-dev
+```
+
+Windows: instructions for installing clang have not yet been written.
+
+Now build proj and deploy it:
 Input:
 ```
 make deploy
@@ -36,8 +49,7 @@ Row ID,OrderID,Order Date,Ship Date,Ship Mode,Customer ID,Customer Name,Segment,
 - - -
 
 ### 3. Look at the first five orders and customer names, using an input file rather than stdin.
-Input:
-```
+Input:```
 proj --in=orders.csv Order\ Date Customer\ Name first[5]
 ```
 Output:
