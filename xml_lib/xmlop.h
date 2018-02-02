@@ -66,7 +66,8 @@ struct XmlOperator
         OpLen, OpLeft, OpRight, OpUpper, OpLower, OpContains, OpFind, // 1-arg and 2-arg string
         OpFormatSec, OpFormatMs, OpRowNum, OpIf, // misc
         OpReal, OpInt, OpBool, OpStr, OpDateTime, OpType, // typing 
-        OpPath, OpPivotPath, OpDepth, OpAttr, OpNodeNum, OpNodeName, OpNodeStart, OpNodeEnd, OpLineNum, // immediate functions (evaluated on path match)
+        OpPath, OpPivotPath, OpDepth, OpAttr, OpLineNum, // immediate functions (evaluated on path match)
+        OpParent, OpNodeNum, OpNodeName, OpNodeStart, OpNodeEnd, // immediate functions (evaluated on path match)
         OpAny, OpSum, OpMinAggr, OpMaxAggr, OpAvg, OpStdev, OpVar, OpCov, OpCorr, OpCount, // aggregate functions
         OpFirst, OpTop, OpSort, OpPivot, OpDistinct, OpHidden, OpWhere, OpSync, OpRoot, OpIn, OpJoin, // directives
         OpCsvOnly, OpCase, OpInputHeader, OpJoinHeader, OpOutputHeader, OpHelp // directives
@@ -186,8 +187,9 @@ public:
             XmlOperatorPtr(new XmlOperator( "root",       XmlOperator::OpRoot,         1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive | XmlOperator::OnceOnly | XmlOperator::UnquotedStringFirstArg )),
             XmlOperatorPtr(new XmlOperator( "path",       XmlOperator::OpPath,         1, 1, XmlType::String,   XmlOperator::NoData | XmlOperator::StartMatchEval )),
             XmlOperatorPtr(new XmlOperator( "pivotpath",  XmlOperator::OpPivotPath,    1, 1, XmlType::String,   XmlOperator::NoData | XmlOperator::StartMatchEval | XmlOperator::TopLevelOnly | XmlOperator::OnceOnly )), 
-            XmlOperatorPtr(new XmlOperator( "nodenum",    XmlOperator::OpNodeNum,      1, 2, XmlType::Integer,  XmlOperator::NoData | XmlOperator::StartMatchEval | XmlOperator::UnquotedStringSecondArg )), 
+            XmlOperatorPtr(new XmlOperator( "parent",     XmlOperator::OpParent,       1, 1, XmlType::String,   XmlOperator::NoData | XmlOperator::StartMatchEval )),
             XmlOperatorPtr(new XmlOperator( "nodename",   XmlOperator::OpNodeName,     1, 2, XmlType::String,   XmlOperator::NoData | XmlOperator::StartMatchEval )),
+            XmlOperatorPtr(new XmlOperator( "nodenum",    XmlOperator::OpNodeNum,      1, 2, XmlType::Integer,  XmlOperator::NoData | XmlOperator::StartMatchEval | XmlOperator::UnquotedStringSecondArg )), 
             XmlOperatorPtr(new XmlOperator( "nodestart",  XmlOperator::OpNodeStart,    1, 1, XmlType::Integer,  XmlOperator::NoData | XmlOperator::StartMatchEval | XmlOperator::UnquotedStringSecondArg )), 
             XmlOperatorPtr(new XmlOperator( "nodeend",    XmlOperator::OpNodeEnd,      1, 1, XmlType::Integer,  XmlOperator::NoData | XmlOperator::EndMatchEval | XmlOperator::UnquotedStringSecondArg )), 
             XmlOperatorPtr(new XmlOperator( "where",      XmlOperator::OpWhere,        1, 1, XmlType::Unknown,  XmlOperator::TopLevelOnly | XmlOperator::Directive )),

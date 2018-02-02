@@ -1,0 +1,13 @@
+json.*.*,nodename[json.*.*],"nodename[json.*.*,1]"
+1,a,ones
+2,b,ones
+3,c,ones
+10,a,tens
+20,b,tens
+30,c,tens
+100,a,hundreds
+200,b,hundreds
+300,c,hundreds
+1000,a,thousands
+2000,b,thousands
+3000,c,thousands

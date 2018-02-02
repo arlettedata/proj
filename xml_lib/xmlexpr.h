@@ -742,27 +742,13 @@ public:
             case Opcode::OpPath:
             case Opcode::OpPivotPath:
             case Opcode::OpDepth:
-            case Opcode::OpNodeNum:
+            case Opcode::OpParent: 
             case Opcode::OpNodeName: 
+            case Opcode::OpNodeNum:
             case Opcode::OpNodeStart:
             case Opcode::OpNodeEnd: {
-                // consider the tags parsed that made the match; we want to exclude them: e.g. path(bar.baz) for
-                // <foo><bar><baz> should refer to foo
                 int currDepth = (int)m_context->nodeStack.size();
-                // these operations are evaluated when we have matched the start tag, not the end tag
-                int relativeDepth = m_context->relativeDepth - 1;
-                if (currDepth < relativeDepth) {
-                    // guard against the depth being less or equal than the actual tags we've parsed; leave the output
-                    // empty
-                    if (expr->GetType() == XmlType::Integer) {
-                        expr->SetValue((__int64_t)0);
-                    } 
-                    else {
-                        expr->SetValue(std::move(std::string()));
-                    }
-                    break;
-                }
-                int baseIdx = std::min(currDepth - relativeDepth, currDepth - 1);
+                int baseIdx = currDepth - 1;
                 int idx;
                 switch (op->opcode) {
                     case Opcode::OpPath:
@@ -803,8 +789,12 @@ public:
                         break;
                     }
 
+                    case Opcode::OpParent:
                     case Opcode::OpNodeName:
-                        if (expr->GetNumArgs() == 1) {
+                        if (op->opcode == Opcode::OpParent) {
+                            idx = 1;
+                        }
+                        else if (expr->GetNumArgs() == 1) {
                             idx = baseIdx;
                         }
                         else {
