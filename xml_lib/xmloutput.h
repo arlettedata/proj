@@ -183,11 +183,6 @@ public:
         }
     }
 
-    void AddData(const std::string& tag, bool data, int verbosity = All, bool DataOnSeparateLine = false)
-    {
-        AddData(tag, std::string(data ? "true" : "false"), verbosity, DataOnSeparateLine);
-    }
-
     template <class T>
     void AddData(const std::string& tag, const T& data, int verbosity = All, bool DataOnSeparateLine = false)
     {
@@ -202,7 +197,7 @@ public:
             if (m_flags & Indents) {
                 *m_outputStream << "  ";
             }
-            *m_outputStream << data;
+            Encode(data);
             NewLine(verbosity);
             Indent(verbosity);
             *m_outputStream << "</" << tag << ">";
@@ -210,7 +205,9 @@ public:
         }
         else {
             Indent(verbosity);
-            *m_outputStream << "<" << tag << ">" << data << "</" << tag << ">";
+            *m_outputStream << "<" << tag << ">";
+            Encode(data);
+            *m_outputStream << "</" << tag << ">";
             NewLine(verbosity);
         }
     }
@@ -312,6 +309,64 @@ public:
     }
 
 private:
+    void Encode(bool data) 
+    {
+        *m_outputStream << (data ? "true" : "false");
+    }
+
+    void Encode(const char* data, bool justBrackets = true)
+    {
+        std::ostream& out = *m_outputStream;
+        if (justBrackets) {
+            for (const char* pos = data; *pos != '\0'; pos++ ) {
+                switch(*pos) {
+                    case '<':
+                        out << "&lt;";
+                        break;
+                    case '>':
+                        out << "&gt;";
+                        break;
+                    default:
+                        out << *pos;
+                }
+            }
+        } 
+        else {
+            for (const char* pos = data; *pos != '\0'; pos++ ) {
+                switch(*pos) {
+                    case '&':
+                        out << "&amp;";
+                        break;
+                    case '<':
+                        out << "&lt;";
+                        break;
+                    case '>':
+                        out << "&gt;";
+                        break;
+                    case '\'':
+                        out << "&apos;";
+                        break;
+                    case '\"':
+                        out << "&quot;";
+                        break;
+                    default:
+                        out << *pos;
+                }
+            }
+        }
+    }
+
+    void Encode(const std::string& data, bool justBrackets = true) 
+    {
+        Encode(data.c_str(), justBrackets);
+    }
+
+    template<typename T>
+    void Encode(T data)
+    {
+        *m_outputStream << data;
+    }
+
     std::ostream* m_outputStream;
     std::ostream* m_prevStream;
     std::stack<std::string> m_tagStack;

@@ -387,7 +387,7 @@ private:
 
     void ParseCsvLine(const std::string& line, const std::string& delimiter, std::vector<std::string>& parts)
     {
-        XmlUtils::Unquote(XmlUtils::Split(line, parts, delimiter, "\"", true /*insertGaps*/));
+        XmlUtils::UnescapeAndUnquote(XmlUtils::Split(line, parts, delimiter, "\"", true /*insertGaps*/));
     }
 
     bool ParseCsv(std::queue<std::string>& backLines) // backBuffer is from the log parse rejection and has lines
@@ -484,9 +484,6 @@ private:
                     fieldNames.push_back(name); // create more field names
                 }
                 if (i < values.size()) {
-                    std::string& value = values[i];    
-                    XmlUtils::Replace(value, "<", "&lt;");
-                    XmlUtils::Replace(value, ">", "&gt;");
                     xml->AddData(fieldNames[i], values[i]);
                 }
                 else {

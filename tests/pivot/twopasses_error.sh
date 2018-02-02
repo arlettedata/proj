@@ -1,1 +1,1 @@
-cat colors.xml | built --in=...:pivot[name,value,true]
+cat colors.xml | proj ...:pivot[name,value,true]

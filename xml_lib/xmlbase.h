@@ -365,6 +365,9 @@ struct XmlDateTime
     // This is a lossy conversion
     double ToReal() const
     {
+        if (error) {
+            return -1.0;
+        }
         time_t t = ToStdTime();
         double d = t + (ms / 10000.0);
         return d;
@@ -372,6 +375,9 @@ struct XmlDateTime
 
     __int64_t ToInteger() const
     {
+        if (error) {
+            return -1;
+        }
         time_t t = ToStdTime();
         return (__int64_t)t;
     }

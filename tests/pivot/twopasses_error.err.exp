@@ -1,1 +1,1 @@
-/Users/bkramer/proj/tests/pivot/twopasses_error.sh: line 1: built: command not found
+Given query requires two passes, so stdin cannot be used as an input.

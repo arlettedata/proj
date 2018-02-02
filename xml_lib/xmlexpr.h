@@ -758,7 +758,7 @@ public:
                         expr->SetValue((__int64_t)0);
                     } 
                     else {
-                        expr->SetValue(std::move(std::string("")));
+                        expr->SetValue(std::move(std::string()));
                     }
                     break;
                 }

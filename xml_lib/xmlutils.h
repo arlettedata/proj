@@ -34,6 +34,47 @@
 #include <math.h>
 #include <stdexcept>
 
+// convenience debug printer: print("foo",1) => "foo 1"
+
+template <typename T> void _print(const T v)
+{
+    std::cout << (std::string)v; // assuming T implements operator std::string
+}
+template <> void _print(bool v)
+{
+    std::cout << (v ? "true" : "false");
+}
+template <> void _print(int v)
+{
+    std::cout << v;
+}
+template <> void _print(double v)
+{
+    std::cout << v;
+}
+template <> void _print(__int64_t v)
+{
+    std::cout << v;
+}
+template <> void _print(size_t v)
+{
+    std::cout << v;
+}
+template <typename T> void _print(const std::shared_ptr<T> v)
+{
+    _print(*v);
+}
+void print()
+{
+    std::cout << std::endl;
+}
+template <typename T, typename... Args> void print(const T v, Args... args)
+{
+    _print(v);
+    std::cout << " ";
+    print(args...);
+}
+
 namespace StreamingXml
 {
 
@@ -104,12 +145,16 @@ public:
     static std::string ToString(double d, int precision)
     {
         char buf[1024];
+        if (isnan(d)) {
+            // avoid nan or -nan difference (dep. on impl.) by choosing one
+            return std::move(std::string("nan")); 
+        }
         int pos = std::snprintf(buf, sizeof(buf), "%.*f", precision, d) - 1;
         // Trim all trailing zeros, except one immediately after the decimal point
         while (pos >= 2 && buf[pos] == '0' && buf[pos - 1] != '.') {
             buf[pos--] = '\0';
         }
-        return move(std::string(buf));
+        return std::move(std::string(buf));
     }
 
     static std::vector<std::string>& Split(const std::string& input, std::vector<std::string>& output,
@@ -168,7 +213,7 @@ public:
         return std::move(arr);
     }
 
-    static std::string UnescapeCharacters(const std::string& str)
+    static std::string UnescapeAndDecodeEntities(const std::string& str)
     {   
         #define CH(offset, ch) (str[pos + offset] == ch)
         std::string result;
@@ -273,27 +318,69 @@ public:
         return std::move(result);
     }
 
-    static std::string& Unquote(std::string& str)
+    // Unescape processes the usual escaped characters, removes quotes around strings, but
+    // maps MS-Jet style pair of quote to quotes.
+    static std::string& UnescapeAndUnquote(std::string& str)
     {
-        size_t len = str.length();
-        if (len > 0) {
-            for (size_t pos = 0; pos < len - 1; pos++) {
-                char ch = str[pos];
-                if (ch == '\"') {
-                    str.erase(pos, 1); // remove quote
-                }
-                else if (ch == '\\') {
-                    pos++; // skip following character
+        size_t pos = 0;
+        if (str[0] == '\"') {
+            // remove quote now instead of possibily treating this as an MS-JET quote.
+            str.erase(0, 1);
+        }
+        for (;;) {
+            char ch = str[pos];
+            if (ch == '\0') {
+                break;
+            }
+            if (ch == '\\') {
+                char ch2 = str[pos+1];
+                switch (ch2) {
+                    case '\"':
+                    case '\'':
+                    case '\\':
+                        str.erase(pos, 1); // unescape, advance past next char
+                        break;
+                    case 't':
+                        str.erase(pos, 1); // unescape
+                        str[pos] = '\t';  // write tab and advance past next char
+                        break;  
+                    case 'n':
+                        str.erase(pos, 1); // unescape
+                        str[pos] = '\n'; // write newline and advance past next char
+                        break;
+                    case 'r':
+                        if (str[pos+2] == '\\' && str[pos+3] != 'n') {
+                            str.erase(pos, 2); // drop '\r'
+                            continue; // handle \n
+                        } else {
+                            str.erase(pos, 1); // unescape
+                            str[pos] = '\n'; // write newline and advance past next char
+                        }
+                        break;
+
                 }
             }
+            else if (ch == '\"') {
+                char ch2 = str[pos+1];
+                if (ch2 == '\"') {
+                    str.erase(pos, 1); // MS Jet style quotes (?): "" encodes for " 
+                    //(except for first char, which is handled separately before we enter the loop)
+                    // keep subsequent character 
+                }
+                else {
+                    str.erase(pos, 1); // remove quote
+                    continue; // evaluate the subsequent character
+                }
+            }
+            pos++;
         }
         return str;
     }
 
-    static std::vector<std::string>& Unquote(std::vector<std::string>& strs)
+    static std::vector<std::string>& UnescapeAndUnquote(std::vector<std::string>& strs)
     {
         for (size_t i = 0; i < strs.size(); i++) {
-            Unquote(strs[i]);
+            UnescapeAndUnquote(strs[i]);
         }
         return strs;
     }
@@ -533,12 +620,12 @@ public:
             ss << s[i];
         }
         ss << '\"';
-        return std::move(ss.str().c_str());
+        return ss.str().c_str();
     }
 
     static std::string FormatForCsv(const std::string& value)
     {
-        return std::move(CsvNormalize(std::move(XmlUtils::UnescapeCharacters(value))));
+        return std::move(CsvNormalize(std::move(XmlUtils::UnescapeAndDecodeEntities(value))));
     }
 
     static void Error(const std::string& msg, const std::string& token1 = "")
@@ -627,43 +714,3 @@ static bool ControlCIssued()
 
 } // namespace StreamingXml
 
-// convenience debug printer: print("foo",1) => "foo 1"
-
-template <typename T> void _print(const T v)
-{
-    std::cout << (std::string)v; // assuming T implements operator std::string
-}
-template <> void _print(bool v)
-{
-    std::cout << (v ? "true" : "false");
-}
-template <> void _print(int v)
-{
-    std::cout << v;
-}
-template <> void _print(double v)
-{
-    std::cout << v;
-}
-template <> void _print(__int64_t v)
-{
-    std::cout << v;
-}
-template <> void _print(size_t v)
-{
-    std::cout << v;
-}
-template <typename T> void _print(const std::shared_ptr<T> v)
-{
-    _print(*v);
-}
-void print()
-{
-    std::cout << std::endl;
-}
-template <typename T, typename... Args> void print(const T v, Args... args)
-{
-    _print(v);
-    std::cout << " ";
-    print(args...);
-}

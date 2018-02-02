@@ -2,3 +2,4 @@ node_modules
 *.act
 bin
 notes.txt
+.vscode
