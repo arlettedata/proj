@@ -1,0 +1,12 @@
+<top x="foo">
+    <items>
+        <a>1</a>
+        <b>2</b>
+        <c>3</c>
+    </items>
+    <items>
+        <a>10</a>
+        <b>20</b>
+        <c>30</c>
+    </items>
+</top>

@@ -59,7 +59,7 @@ public:
     bool MatchStartTag(const char* tag, size_t len)
     {
         bool matchDetected = false;
-        
+
         m_rowState->matchType = XmlRowMatchState::NotAllMatched;
 
         if (m_paths.size()) {
@@ -68,14 +68,14 @@ public:
             }
 
             m_rowState->currParseDepth++;
-            for (auto& path : m_paths) { 
+            for (auto& path : m_paths) {
                 matchDetected |= path->Path_MatchStartTag(tag, len);
             }
 
             if (matchDetected) {
-                for (auto& path : m_paths) { 
+                for (auto& path : m_paths) {
                     // reset any "sequentially later" matches to keep things in sync
-                    path->Path_Reset(m_rowState->currParseDepth, m_rowState->matchOrder); 
+                    path->Path_Reset(m_rowState->currParseDepth, m_rowState->matchOrder);
                 }
             }
         }
@@ -89,7 +89,7 @@ public:
     {
         bool matchDetected = false;
         if (m_paths.size()) {
-            for (auto& path : m_paths) { 
+            for (auto& path : m_paths) {
                 matchDetected |= path->Path_MatchEndTag(tag, len);
             }
             m_rowState->currParseDepth--;
@@ -100,7 +100,7 @@ public:
 
     void CommitMatch()
     {
-        for (auto& path : m_paths) { 
+        for (auto& path : m_paths) {
             path->RemoveValueIndents();
             path->StartMatch();
         }
@@ -115,12 +115,12 @@ public:
                 allMatched = true;
                 break; // no other criteria needed if we matched on a sync path
             }
-            if ((path->m_flags & XmlPath::NoData && path->m_pathRef->endMatchExprs.size() == 0) && 
+            if ((path->m_flags & XmlPath::NoData && path->m_pathRef->endMatchExprs.size() == 0) &&
                 (path->m_matchState == XmlPath::SearchingForEndTag)) {
                 // relaxed matching: we don't need to reach the end tag when the path doesn't need data. e.g. attribute
                 // lookup
                 allMatched = true;
-                withNoDataMatches = true;
+                //withNoDataMatches = true; // TODO: fixed an edge. Do we need this anymore?
             }
             else if (path->IsMatched()) {
                 allMatched = true;
@@ -142,7 +142,7 @@ public:
 
     void Initialize()
     {
-        for (auto& path : m_paths) { 
+        for (auto& path : m_paths) {
             path->m_rowState = m_rowState;
         }
     }
@@ -151,7 +151,7 @@ public:
     {
         m_rowState->matchType = MatchType::NotAllMatched;
         m_rowState->matchOrder = 0;
-        for (auto& path : m_paths) { 
+        for (auto& path : m_paths) {
             path->Path_Rollback(m_rowState->currParseDepth, -1);
         }
     }
@@ -160,7 +160,7 @@ public:
     {
         m_rowDomain.clear();
         m_rowState->Reset();
-        for (auto& path : m_paths) { 
+        for (auto& path : m_paths) {
             path->Path_Reset(-1, -1);
         }
 

@@ -107,7 +107,7 @@ private:
                 }
             }
             else {
-                // Handle 0+ matches for wildcard: if we are at a wildcard 
+                // Handle 0+ matches for wildcard: if we are at a wildcard
                 // and the next position of the taglist matches, then advance position.
                 if (m_wildcard && next()) {
                     const char* str = next()->m_name.c_str();
@@ -117,9 +117,9 @@ private:
                             m_relativeParseDepth++;
                         }
                         // Take care of actual tag match a recursive call.
-                        return next()->TagList_MatchStartTag(tag, len, currParseDepth - m_relativeParseDepth, completeMatch); 
+                        return next()->TagList_MatchStartTag(tag, len, currParseDepth - m_relativeParseDepth, completeMatch);
                     }
-                } 
+                }
                 // Handle 1+ matches for wildcard, or regular tag match at current position of taglist
                 const char* str = m_name.c_str();
                 if (m_wildcard || (XmlUtils::stringsEqCase(str, tag, len) && (str[len] == '\0'))) {
@@ -242,7 +242,7 @@ public:
                 tag = tag.substr(1, tag.size() - 2);
             }
             m_tagList.push_back(std::move(Tag(tag, wildcard, i == 0, i == tags.size() - 1)));
-        }                        
+        }
         if (m_pathRef->flags & XmlPathRef::NoData && !(m_pathRef->flags & XmlPathRef::Data)) {
             m_flags |= XmlPath::NoData;
         }
@@ -397,7 +397,7 @@ public:
     void CheckUnreferenced() const
     {
         if (!(m_flags & ExistsInInput)) {
-            XmlUtils::Error("Path not matched in %sinput: %s", 
+            XmlUtils::Error("Path not matched in %sinput: %s",
                 (m_pathRef->flags & XmlPathRef::Joined) ? "joined " : "",
                 m_pathRef->pathSpec);
         }
